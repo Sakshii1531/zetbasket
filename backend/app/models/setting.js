@@ -9,11 +9,11 @@ const settingSchema = new mongoose.Schema(
         // General
         appName: {
             type: String,
-            default: "Turbo Cart",
+            default: "ZetBasket",
         },
         supportEmail: {
             type: String,
-            default: "support@turbocart.com",
+            default: "support@zetbasket.in",
         },
         supportPhone: {
             type: String,

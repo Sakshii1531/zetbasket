@@ -617,7 +617,7 @@ const OrderDetail = () => {
                                 This is a system-generated commercial invoice. No physical signature required.
                             </div>
                             <div style={{ fontSize: "10px", color: "#94a3b8", marginTop: "5px" }}>
-                                {settings?.appName || 'Noyo Kart'} • Customer Support: support@turbocart.com
+                                {settings?.appName || 'ZetBasket'} • Customer Support: {settings?.supportEmail || 'support@zetbasket.in'}
                             </div>
                         </div>
                     </div>
