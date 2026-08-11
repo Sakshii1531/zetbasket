@@ -124,9 +124,9 @@ const Dashboard = () => {
             className="w-12 h-12 rounded-full overflow-hidden border-2 border-primary ring-2 ring-primary/20 shadow-sm cursor-pointer"
             onClick={() => navigate("/delivery/profile")}>
             <img
-              src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
+              src={user?.profileImage || "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"}
               alt="Profile"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover bg-gray-100"
             />
           </div>
           <div
@@ -141,7 +141,7 @@ const Dashboard = () => {
                 4.8
               </span>
               <span className="text-gray-300 mx-2">•</span>
-              <span className="ds-caption text-gray-500">ID: 882190</span>
+              <span className="ds-caption text-gray-500">ID: {(user?._id || user?.id || "N/A").slice(-6).toUpperCase()}</span>
             </div>
           </div>
         </div>

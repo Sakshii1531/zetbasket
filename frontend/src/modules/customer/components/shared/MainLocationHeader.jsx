@@ -92,8 +92,8 @@ function CategoryNavColumn({
           <cat.icon
             sx={{
               fontSize: { xs: 20, md: 24 },
-              color: iconColor,
-              opacity: isActive ? 1 : 0.62,
+              color: "#000000",
+              opacity: isActive ? 1 : 0.85,
               transition: "opacity 0.2s, transform 0.2s",
             }}
           />
@@ -103,7 +103,7 @@ function CategoryNavColumn({
             alt={cat.name}
             loading="lazy"
             className="h-5 w-5 object-contain md:h-6 md:w-6"
-            style={{ opacity: isActive ? 1 : 0.62 }}
+            style={{ opacity: isActive ? 1 : 0.85 }}
           />
         )}
       </div>
@@ -112,11 +112,11 @@ function CategoryNavColumn({
           ref={labelRef}
           className={cn(
             "relative z-10 mx-auto block max-w-[72px] truncate px-1 pb-0.5 text-center text-[8px] uppercase tracking-tight md:max-w-[88px] md:text-[10px]",
-            isActive ? "font-black" : "font-semibold",
+            isActive ? "font-black text-black" : "font-bold text-black",
           )}
           style={{
-            color: isActive ? iconColor : (headerFontColor || "#111111"),
-            opacity: isActive ? 1 : 0.68,
+            color: "#000000",
+            opacity: isActive ? 1 : 0.9,
           }}>
           {cat.name}
         </span>
@@ -564,7 +564,7 @@ const MainLocationHeader = ({
                   mass: 0.6,
                 },
               }}
-              className="relative flex items-end md:justify-center gap-0 overflow-x-auto no-scrollbar -mx-2 px-2 md:mx-0 md:px-0 z-10 snap-x pt-1 min-h-[68px] md:min-h-[76px] pb-0.5 mt-3">
+              className="relative flex items-end md:justify-center gap-0 overflow-x-auto no-scrollbar -mx-2 px-2 md:mx-0 md:px-0 z-10 snap-x pt-0.5 min-h-[68px] md:min-h-[76px] pb-0.5 mt-1">
               {categories.map((cat) => {
                 const isActive = activeCategory?.id === cat.id;
                 return (

@@ -21,6 +21,7 @@ import Button from "@/shared/components/ui/Button";
 import Card from "@/shared/components/ui/Card";
 import { useAuth } from "@core/context/AuthContext";
 import { useSettings } from "@core/context/SettingsContext";
+import { cn } from "@/lib/utils";
 import axiosInstance from '@core/api/axios';
 import { useEffect } from 'react';
 
@@ -139,7 +140,18 @@ const Profile = () => {
                 className="w-full h-full rounded-full object-cover bg-gray-100"
               />
             </div>
-            <div className="absolute bottom-0 right-0 w-6 h-6 bg-brand-500 border-2 border-white rounded-full"></div>
+            <div
+              className={cn(
+                "absolute bottom-0 right-0 w-6 h-6 border-2 border-white rounded-full transition-all duration-300 flex items-center justify-center shadow-md",
+                user?.isOnline !== false
+                  ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]"
+                  : "bg-rose-500"
+              )}>
+              <span className={cn(
+                "w-2 h-2 rounded-full bg-white",
+                user?.isOnline !== false ? "animate-pulse" : ""
+              )} />
+            </div>
           </div>
           <div className="text-white">
             <h2 className="font-bold text-xl">{user?.name || "Delivery Partner"}</h2>
