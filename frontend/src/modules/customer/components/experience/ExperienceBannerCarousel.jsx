@@ -86,7 +86,7 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
             key={idx}
             className={cn(
               "relative shrink-0 overflow-hidden flex items-center justify-center box-border",
-              fullWidth ? "aspect-[2/1] sm:aspect-[21/9] bg-slate-100 rounded-none px-0" : "px-4 md:px-8 py-2"
+              fullWidth ? "bg-slate-100 rounded-none px-0" : "px-0 py-1"
             )}
             style={{ width: `${100 / totalItems}%` }}
           >
@@ -104,13 +104,13 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
                 }
                 sizes="100vw"
                 alt={banner.title || section?.title || "Banner"}
-                className="w-full h-full object-contain object-center pointer-events-none"
+                className="w-full h-auto object-contain object-top pointer-events-none"
                 loading={idx === 0 ? "eager" : "lazy"}
                 fetchPriority={idx === 0 ? "high" : "low"}
                 decoding="async"
               />
             ) : (
-              <div className="w-full max-w-[560px] aspect-[2/1] sm:aspect-[21/9] overflow-hidden rounded-3xl bg-slate-100 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+              <div className="w-full overflow-hidden rounded-2xl sm:rounded-3xl bg-slate-50 shadow-md">
                 <img
                   src={getBannerOptimizedSrc(banner.imageUrl)}
                   srcSet={
@@ -122,9 +122,9 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
                         )
                       : undefined
                   }
-                  sizes="(max-width: 768px) 100vw, 560px"
+                  sizes="100vw"
                   alt={banner.title || section?.title || "Banner"}
-                  className="w-full h-full object-cover object-center pointer-events-none"
+                  className="w-full h-auto max-h-[480px] object-contain object-top rounded-2xl sm:rounded-3xl pointer-events-none"
                   loading={idx === 0 ? "eager" : "lazy"}
                   fetchPriority={idx === 0 ? "high" : "low"}
                   decoding="async"

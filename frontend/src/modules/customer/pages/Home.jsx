@@ -457,16 +457,23 @@ const Home = () => {
       </div>
 
       {/* Pincode Serviceability Check Widget */}
-      <div className="container mx-auto px-4 md:px-8 lg:px-[50px] mt-4 mb-4">
-        <div className="bg-white/90 backdrop-blur-md rounded-2xl p-4 border-2 border-slate-200 shadow-md max-w-2xl mx-auto transition-all hover:shadow-lg">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="container mx-auto px-4 md:px-8 lg:px-[50px] mt-1 mb-3">
+        <div className="relative overflow-hidden bg-white/95 backdrop-blur-md rounded-3xl p-4 sm:p-5 border border-emerald-100/80 shadow-[0_8px_30px_rgba(0,0,0,0.04)] max-w-2xl mx-auto transition-all duration-300 hover:shadow-[0_12px_40px_rgba(16,185,129,0.08)]">
+          {/* Subtle Ambient Background Decorative Glow */}
+          <div className="absolute top-0 right-0 w-36 h-36 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-28 h-28 bg-teal-500/5 rounded-full blur-xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-xl bg-brand-50 flex items-center justify-center text-primary shrink-0">
-                <MapPin className="h-5 w-5 text-primary" />
+              <div className="h-10 w-10 rounded-2xl bg-emerald-50/90 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0 shadow-xs">
+                <MapPin className="h-5 w-5 text-emerald-600 animate-pulse" />
               </div>
               <div>
-                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest leading-tight">Delivery Check</h3>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider hidden sm:block">Check if delivery is available in your area</p>
+                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider leading-tight flex items-center gap-1.5">
+                  Delivery Check
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                </h3>
+                <p className="text-[10px] text-slate-400 font-bold tracking-wide mt-0.5 hidden sm:block">Check instant 10-15 min delivery availability in your area</p>
               </div>
             </div>
             
@@ -481,8 +488,8 @@ const Home = () => {
                   value={pincode}
                   onChange={(e) => handlePincodeChange(e.target.value)}
                   className={cn(
-                    "w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 transition-all placeholder-slate-400/80",
-                    validationError ? "border-red-300 focus:ring-red-500/10" : "border-slate-200 focus:ring-brand-500/10"
+                    "w-full px-4 py-2.5 bg-slate-50/90 border rounded-2xl text-xs font-bold text-slate-800 outline-none focus:ring-2 transition-all duration-200 placeholder-slate-400/80 shadow-inner-xs",
+                    validationError ? "border-red-300 focus:ring-red-500/10" : "border-slate-200/80 focus:border-emerald-500 focus:ring-emerald-500/15"
                   )}
                 />
                 {validationError && (
@@ -492,22 +499,28 @@ const Home = () => {
               <button 
                 type="submit"
                 disabled={checking || pincode.length !== 6}
-                className="px-5 py-2.5 bg-primary text-white font-black rounded-xl text-[10px] uppercase tracking-widest active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none hover:bg-primary/90 shadow-sm shrink-0"
+                className="px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black rounded-2xl text-[10px] uppercase tracking-widest active:scale-95 transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none shadow-md shadow-emerald-600/20 shrink-0"
               >
-                {checking ? "..." : "Check"}
+                {checking ? (
+                  <span className="flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  </span>
+                ) : (
+                  "Check"
+                )}
               </button>
             </form>
           </div>
           {serviceabilityResult && (
             <div className={cn(
-              "mt-3 p-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 border transition-all animate-in fade-in slide-in-from-top-1",
+              "mt-3 p-3 rounded-2xl text-[11px] font-extrabold uppercase tracking-wide flex items-center gap-2.5 border transition-all duration-200 animate-in fade-in slide-in-from-top-1",
               serviceabilityResult.serviceable 
-                ? "bg-green-50/50 text-green-700 border-green-100/50" 
-                : "bg-red-50/50 text-red-700 border-red-100/50"
+                ? "bg-emerald-50/90 text-emerald-800 border-emerald-200/70 shadow-xs" 
+                : "bg-rose-50/90 text-rose-800 border-rose-200/70 shadow-xs"
             )}>
               <div className={cn(
-                "h-1.5 w-1.5 rounded-full flex-shrink-0", 
-                serviceabilityResult.serviceable ? "bg-green-500 animate-pulse" : "bg-red-500"
+                "h-2 w-2 rounded-full flex-shrink-0", 
+                serviceabilityResult.serviceable ? "bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" : "bg-rose-500"
               )} />
               <span>{serviceabilityResult.message}</span>
             </div>
