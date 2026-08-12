@@ -49,6 +49,7 @@ const DeliveryLayout = () => {
   const locationRequestRef = useRef({ inFlight: false, controller: null });
   const orderRingtoneRef = useRef(null);
   const ringtoneRetryTimerRef = useRef(null);
+  const ringtoneUnlockHandlerRef = useRef(null);
   useEffect(() => {
     const handleFocusIn = (e) => {
       const target = e.target;

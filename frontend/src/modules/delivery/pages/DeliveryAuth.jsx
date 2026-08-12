@@ -234,6 +234,10 @@ const DeliveryAuth = () => {
 
   const handleSendOtp = async () => {
     try {
+      if (!agreed) {
+        toast.error("Please tick the checkbox to agree to the Terms & Privacy Policy");
+        return;
+      }
       if (mode === "login") {
         if (!loginPhone || !/^[6-9]\d{9}$/.test(loginPhone)) {
           toast.error("Please enter a valid 10-digit Indian phone number starting with 6, 7, 8, or 9");
@@ -677,6 +681,10 @@ const DeliveryAuth = () => {
                                 toast.error("Please enter your preferred delivery area (minimum 3 characters)");
                                 return;
                               }
+                              if (!agreed) {
+                                toast.error("Please tick the checkbox to agree to the Terms & Privacy Policy");
+                                return;
+                              }
                               setSignupStep(2);
                             }}
                             className="w-full py-4 bg-black text-white rounded-2xl text-sm font-black tracking-widest uppercase shadow-lg shadow-brand-200 hover:bg-brand-700 transition-all flex items-center justify-center gap-2"
@@ -975,95 +983,6 @@ const DeliveryAuth = () => {
                                   )}
                                 </label>
 
-                                {/* OCR Progress & Badge for DL */}
-                                {doc.id === "dl" && (
-                                  <div className="mt-2 px-1">
-                                    {(isScanning && doc.state === null) && (
-                                      <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1">
-                                        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-brand-500">
-                                          <span>AI Scanning DL...</span>
-                                          <span>{ocrProgress}%</span>
-                                        </div>
-                                        <div className="h-1.5 w-full bg-brand-50 rounded-full overflow-hidden">
-                                          <motion.div
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${ocrProgress}%` }}
-                                            className="h-full bg-brand-500"
-                                          />
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {!isScanning && dlVerified === true && (
-                                      <div className="flex items-center gap-1.5 text-brand-600 animate-in zoom-in-95 duration-300">
-                                        <CheckCircle className="w-3.5 h-3.5" />
-                                        <span className="text-[10px] font-black uppercase tracking-wider">AI Verified: Valid DL Found</span>
-                                      </div>
-                                    )}
-
-
-                                  </div>
-                                )}
-
-                                {/* OCR Progress & Badge for PAN */}
-                                {doc.id === "pan" && (
-                                  <div className="mt-2 px-1">
-                                    {(isScanning && doc.state === null) && (
-                                      <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1">
-                                        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-brand-500">
-                                          <span>AI Scanning PAN...</span>
-                                          <span>{ocrProgress}%</span>
-                                        </div>
-                                        <div className="h-1.5 w-full bg-brand-50 rounded-full overflow-hidden">
-                                          <motion.div
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${ocrProgress}%` }}
-                                            className="h-full bg-brand-500"
-                                          />
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {!isScanning && panVerified === true && (
-                                      <div className="flex items-center gap-1.5 text-brand-600 animate-in zoom-in-95 duration-300">
-                                        <CheckCircle className="w-3.5 h-3.5" />
-                                        <span className="text-[10px] font-black uppercase tracking-wider">AI Verified: Valid PAN Found</span>
-                                      </div>
-                                    )}
-
-
-                                  </div>
-                                )}
-
-                                {/* OCR Progress & Badge for Aadhar */}
-                                {doc.id === "aadhar" && (
-                                  <div className="mt-2 px-1">
-                                    {(isScanning && doc.state === null) && (
-                                      <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1">
-                                        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-brand-500">
-                                          <span>AI Scanning Aadhar...</span>
-                                          <span>{ocrProgress}%</span>
-                                        </div>
-                                        <div className="h-1.5 w-full bg-brand-50 rounded-full overflow-hidden">
-                                          <motion.div
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${ocrProgress}%` }}
-                                            className="h-full bg-brand-500"
-                                          />
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {!isScanning && aadharVerified === true && (
-                                      <div className="flex items-center gap-1.5 text-brand-600 animate-in zoom-in-95 duration-300">
-                                        <CheckCircle className="w-3.5 h-3.5" />
-                                        <span className="text-[10px] font-black uppercase tracking-wider">AI Verified: Valid Aadhar Found</span>
-                                      </div>
-                                    )}
-
-
-                                  </div>
-                                )}
                               </div>
                             ))}
                             <p className="text-[10px] text-gray-400 italic px-1 flex items-center gap-1.5">
@@ -1081,7 +1000,7 @@ const DeliveryAuth = () => {
                             </button>
                             <button
                               onClick={handleSendOtp}
-                              disabled={loading || dlVerified !== true || panVerified !== true || aadharVerified !== true}
+                              disabled={loading || !aadharFile || !panFile || (signupVehicle !== 'cycle' && !dlFile)}
                               className="flex-[2] py-4 bg-black text-white rounded-2xl text-sm font-black tracking-widest uppercase shadow-lg shadow-brand-200 hover:bg-brand-700 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               {loading ? (
@@ -1096,12 +1015,22 @@ const DeliveryAuth = () => {
                         </motion.div>
                       )}
 
-                      <p className="text-center text-xs text-gray-400 font-semibold pt-1">
-                        By joining, you agree to our{" "}
-                        <Link to="/terms" className="text-brand-500 font-bold cursor-pointer hover:underline">Terms</Link>{" "}
-                        &amp;{" "}
-                        <Link to="/privacy" className="text-brand-500 font-bold cursor-pointer hover:underline">Privacy Policy</Link>
-                      </p>
+                      <div className="pt-2 flex items-center justify-center">
+                        <label className="flex items-center gap-2.5 cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            checked={agreed}
+                            onChange={(e) => setAgreed(e.target.checked)}
+                            className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black accent-black cursor-pointer shrink-0"
+                          />
+                          <span className="text-xs text-gray-500 font-semibold select-none group-hover:text-gray-700">
+                            I agree to the{" "}
+                            <Link to="/terms" className="text-brand-600 font-bold hover:underline" onClick={(e) => e.stopPropagation()}>Terms</Link>{" "}
+                            &amp;{" "}
+                            <Link to="/privacy" className="text-brand-600 font-bold hover:underline" onClick={(e) => e.stopPropagation()}>Privacy Policy</Link>
+                          </span>
+                        </label>
+                      </div>
                     </div>
                   )}
 
@@ -1130,6 +1059,23 @@ const DeliveryAuth = () => {
                             placeholder="00000 00000"
                           />
                         </div>
+                      </div>
+
+                      <div className="pt-1 flex items-center justify-center">
+                        <label className="flex items-center gap-2.5 cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            checked={agreed}
+                            onChange={(e) => setAgreed(e.target.checked)}
+                            className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black accent-black cursor-pointer shrink-0"
+                          />
+                          <span className="text-xs text-gray-500 font-semibold select-none group-hover:text-gray-700">
+                            I agree to the{" "}
+                            <Link to="/terms" className="text-brand-600 font-bold hover:underline" onClick={(e) => e.stopPropagation()}>Terms</Link>{" "}
+                            &amp;{" "}
+                            <Link to="/privacy" className="text-brand-600 font-bold hover:underline" onClick={(e) => e.stopPropagation()}>Privacy Policy</Link>
+                          </span>
+                        </label>
                       </div>
 
                       <button
