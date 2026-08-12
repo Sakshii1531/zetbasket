@@ -815,6 +815,8 @@ const OrderDetailPage = () => {
           <DeliveryOtpDisplay
             orderId={order?.orderId || orderId}
             checkoutGroupId={order?.checkoutGroupId || orderId}
+            initialOtp={order?.deliveryOtp || order?.deliveryOtpDetails?.code || order?.otp}
+            initialExpiresAt={order?.deliveryOtpExpiresAt || order?.deliveryOtpDetails?.expiresAt}
           />
         )}
 

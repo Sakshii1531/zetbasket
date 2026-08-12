@@ -33,12 +33,53 @@ const matchesOrderIdentifier = (payloadOrderId, identifiers = []) => {
     .includes(normalizedPayloadId);
 };
 
-const DeliveryOtpDisplay = ({ orderId, checkoutGroupId = null }) => {
-  const [otpData, setOtpData] = useState(null);
+const DeliveryOtpDisplay = ({
+  orderId,
+  checkoutGroupId = null,
+  initialOtp = null,
+  initialExpiresAt = null,
+}) => {
+  const [otpData, setOtpData] = useState(() => {
+    if (initialOtp) {
+      return {
+        otp: initialOtp,
+        expiresAt: initialExpiresAt || new Date(Date.now() + 600000).toISOString(),
+        deliveryPersonNearby: true,
+      };
+    }
+    return null;
+  });
   const [isDelivered, setIsDelivered] = useState(false);
-  const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [remainingSeconds, setRemainingSeconds] = useState(() => {
+    if (initialExpiresAt) {
+      const now = new Date().getTime();
+      const expiry = new Date(initialExpiresAt).getTime();
+      const diff = Math.floor((expiry - now) / 1000);
+      return Math.max(0, diff);
+    }
+    return initialOtp ? 600 : 0;
+  });
   const [isVisible, setIsVisible] = useState(true);
   const timerRef = useRef(null);
+
+  // Sync initialOtp if passed after fetch
+  useEffect(() => {
+    if (initialOtp && !isDelivered) {
+      setOtpData((prev) => ({
+        otp: initialOtp,
+        expiresAt: initialExpiresAt || prev?.expiresAt || new Date(Date.now() + 600000).toISOString(),
+        deliveryPersonNearby: true,
+      }));
+      if (initialExpiresAt) {
+        const now = new Date().getTime();
+        const expiry = new Date(initialExpiresAt).getTime();
+        const diff = Math.floor((expiry - now) / 1000);
+        setRemainingSeconds(Math.max(0, diff));
+      } else {
+        setRemainingSeconds(600);
+      }
+    }
+  }, [initialOtp, initialExpiresAt, isDelivered]);
 
   // Calculate remaining time from expiration timestamp
   const calculateRemainingTime = (expiresAt) => {

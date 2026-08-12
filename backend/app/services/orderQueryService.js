@@ -2,6 +2,7 @@ import Order from "../models/order.js";
 import Delivery from "../models/delivery.js";
 import Seller from "../models/seller.js";
 import CheckoutGroup from "../models/checkoutGroup.js";
+import OrderOtp from "../models/orderOtp.js";
 import { WORKFLOW_STATUS } from "../constants/orderWorkflow.js";
 import { distanceMeters } from "../utils/geoUtils.js";
 import {
@@ -576,9 +577,63 @@ export async function getOrderWithAccess(orderId, userId, role) {
     );
   }
 
+  const payload = decorateOrderWithReturnEligibility(order);
+
+  // Attach or auto-generate delivery OTP when order is in delivery state so customer app receives it
+  const isOutForDelivery =
+    order.workflowStatus === WORKFLOW_STATUS.OUT_FOR_DELIVERY ||
+    String(order.status || "").toLowerCase() === "out_for_delivery";
+
+  if (isOutForDelivery) {
+    let activeOtpDoc = await OrderOtp.findOne({
+      orderId: order.orderId,
+      type: "delivery",
+      consumedAt: null,
+      expiresAt: { $gt: new Date() },
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (!activeOtpDoc) {
+      try {
+        const code = String(Math.floor(1000 + Math.random() * 9000)).padStart(4, "0");
+        const codeHash = OrderOtp.hashCode(code);
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+        activeOtpDoc = await OrderOtp.create({
+          orderId: order.orderId,
+          orderMongoId: order._id,
+          type: "delivery",
+          codeHash,
+          code,
+          expiresAt,
+          attempts: 0,
+          maxAttempts: 3,
+          lastGeneratedAt: new Date(),
+        });
+      } catch (otpErr) {
+        logger.warn("Failed to auto-create delivery OTP on order details fetch", {
+          orderId: order.orderId,
+          error: otpErr.message,
+        });
+      }
+    }
+
+    if (activeOtpDoc && activeOtpDoc.code) {
+      payload.deliveryOtp = activeOtpDoc.code;
+      payload.deliveryOtpExpiresAt = activeOtpDoc.expiresAt;
+      payload.deliveryOtpDetails = {
+        code: activeOtpDoc.code,
+        otp: activeOtpDoc.code,
+        expiresAt: activeOtpDoc.expiresAt,
+        deliveryPersonNearby: true,
+      };
+    }
+  }
+
   return {
     isGroupSummary: false,
-    payload: decorateOrderWithReturnEligibility(order),
+    payload,
   };
 }
 

@@ -51,12 +51,12 @@ const DeliveryAuth = () => {
   const [showPendingModal, setShowPendingModal] = useState(false);
 
   // Login state
-  const [loginPhone, setLoginPhone] = useState("7389961407");
+  const [loginPhone, setLoginPhone] = useState("");
 
   // Signup state
   const [signupStep, setSignupStep] = useState(1);
   const [signupName, setSignupName] = useState("");
-  const [signupPhone, setSignupPhone] = useState("7389961407");
+  const [signupPhone, setSignupPhone] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupAddress, setSignupAddress] = useState("");
   const [signupVehicle, setSignupVehicle] = useState("bike");
@@ -99,6 +99,24 @@ const DeliveryAuth = () => {
     }
     return () => clearInterval(interval);
   }, [step, timer]);
+
+  useEffect(() => {
+    const handleFocusIn = (e) => {
+      const target = e.target;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT")
+      ) {
+        setTimeout(() => {
+          target.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 300);
+      }
+    };
+    window.addEventListener("focusin", handleFocusIn);
+    return () => window.removeEventListener("focusin", handleFocusIn);
+  }, []);
 
   const performOCR = async (file, type) => {
     setIsScanning(true);
@@ -216,18 +234,53 @@ const DeliveryAuth = () => {
 
   const handleSendOtp = async () => {
     try {
-      setLoading(true);
       if (mode === "login") {
-        if (!loginPhone || loginPhone.length < 10) {
-          toast.error("Please enter a valid 10-digit phone number");
+        if (!loginPhone || !/^[6-9]\d{9}$/.test(loginPhone)) {
+          toast.error("Please enter a valid 10-digit Indian phone number starting with 6, 7, 8, or 9");
           return;
         }
+        setLoading(true);
         const res = await deliveryApi.sendLoginOtp({ phone: loginPhone });
         toast.success(res.data?.message || "OTP sent!");
       } else {
-        if (!signupName.trim()) { toast.error("Please enter your name"); return; }
-        if (!signupPhone || signupPhone.length < 10) { toast.error("Please enter a valid 10-digit phone number"); return; }
-        if (!profileImageFile) { toast.error("Please upload your profile photo"); return; }
+        if (!profileImageFile) {
+          toast.error("Please upload your profile photo");
+          return;
+        }
+        if (!signupName.trim() || signupName.trim().length < 3) {
+          toast.error("Please enter your full name (minimum 3 characters)");
+          return;
+        }
+        if (!signupPhone || !/^[6-9]\d{9}$/.test(signupPhone)) {
+          toast.error("Please enter a valid 10-digit Indian phone number");
+          return;
+        }
+        if (!signupEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupEmail.trim())) {
+          toast.error("Please enter a valid email address");
+          return;
+        }
+        if (!signupAddress.trim() || signupAddress.trim().length < 10) {
+          toast.error("Please enter your permanent address (minimum 10 characters)");
+          return;
+        }
+        if (!signupDob) {
+          toast.error("Please select your date of birth");
+          return;
+        }
+        if (!aadharFile) {
+          toast.error("Please upload your Aadhar Card document");
+          return;
+        }
+        if (!panFile) {
+          toast.error("Please upload your PAN Card document");
+          return;
+        }
+        if (signupVehicle !== "cycle" && !dlFile) {
+          toast.error("Please upload your Driving License document");
+          return;
+        }
+
+        setLoading(true);
 
         const formData = new FormData();
         formData.append("name", signupName.trim());
@@ -264,7 +317,14 @@ const DeliveryAuth = () => {
   };
 
   const handleVerifyOtp = async () => {
-    if (otp.some((d) => d === "") || !agreed) return;
+    if (otp.some((d) => !d || d.trim() === "")) {
+      toast.error("Please enter the complete 4-digit OTP code");
+      return;
+    }
+    if (!agreed) {
+      toast.error("Please accept the terms and conditions to proceed");
+      return;
+    }
     setLoading(true);
     try {
       const phone = mode === "login" ? loginPhone : signupPhone;
@@ -319,7 +379,7 @@ const DeliveryAuth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F0F4FF] flex flex-col items-center justify-center p-5 font-['Outfit',_sans-serif]" data-lenis-prevent>
+    <div className="min-h-screen min-h-dvh bg-[#F0F4FF] flex flex-col items-center justify-center p-4 sm:p-5 py-6 sm:py-10 font-['Outfit',_sans-serif] overflow-y-auto" data-lenis-prevent>
       {/* Background blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-32 -left-32 w-80 h-80 bg-brand-200/40 rounded-full blur-3xl" />
@@ -330,27 +390,14 @@ const DeliveryAuth = () => {
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-[420px] relative z-10"
+        className="w-full max-w-[420px] relative z-10 my-auto"
       >
         {/* Card */}
-        <div className="bg-white rounded-[2.5rem] shadow-[0_24px_60px_rgba(99,102,241,0.1)] border border-brand-50 overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="bg-white rounded-[2.5rem] shadow-[0_24px_60px_rgba(99,102,241,0.1)] border border-brand-50 overflow-hidden flex flex-col max-h-[85vh] sm:max-h-[90vh]">
 
           {/* Header with Lottie */}
-          <div className="bg-gradient-to-br from-brand-50 to-purple-50 p-8 flex flex-col items-center relative shrink-0">
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-              <div className="w-14 h-14 rounded-2xl bg-white/85 backdrop-blur-sm border border-brand-100 shadow-sm flex items-center justify-center overflow-hidden">
-                {logoUrl ? (
-                  <img
-                    src={logoUrl}
-                    alt={`${appName} logo`}
-                    className="w-10 h-10 object-contain"
-                  />
-                ) : (
-                  <ShieldCheck className="w-5 h-5 text-brand-600" />
-                )}
-              </div>
-            </div>
-            <div className="w-40 h-40">
+          <div className="bg-gradient-to-br from-brand-50 to-purple-50 px-5 py-2 sm:px-6 sm:py-3 pb-3 flex flex-col items-center relative shrink-0">
+            <div className="w-28 h-28 sm:w-32 sm:h-32 -mb-6 sm:-mb-8 mt-0">
               <Lottie animationData={deliveryRiding} loop />
             </div>
             <AnimatePresence mode="wait">
@@ -359,7 +406,7 @@ const DeliveryAuth = () => {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
-                className="text-center mt-3"
+                className="text-center mt-0"
               >
                 <h1 className="text-2xl font-black text-gray-900">
                   {step === "otp"
@@ -368,12 +415,12 @@ const DeliveryAuth = () => {
                       ? "Partner Login"
                       : "Partner Registration"}
                 </h1>
-                <p className="text-gray-500 text-sm mt-1 max-w-[240px] mx-auto">
+                <p className="text-xs font-bold text-gray-400 mt-1">
                   {step === "otp"
-                    ? `Enter the 4-digit code sent to +91 ${mode === "login" ? loginPhone : signupPhone}`
+                    ? `Code sent to +91 ${mode === "login" ? loginPhone : signupPhone}`
                     : mode === "login"
-                      ? "Login with your registered phone number"
-                      : `Step ${signupStep} of 4: ${signupStep === 1 ? "Personal Info" : signupStep === 2 ? "Vehicle Info" : signupStep === 3 ? "Bank Info" : "Documents"}`}
+                      ? `Access your ${appName} delivery console`
+                      : "Join our high-earning delivery fleet today"}
                 </p>
               </motion.div>
             </AnimatePresence>
@@ -381,15 +428,16 @@ const DeliveryAuth = () => {
 
           {/* Tab Switch */}
           {step === "form" && (
-            <div className="flex mx-6 mt-6 bg-gray-100 rounded-2xl p-1 shrink-0">
+            <div className="flex mx-6 mt-3 bg-gray-100/80 rounded-2xl p-1.5 shrink-0 border border-gray-100">
               {["login", "signup"].map((m) => (
                 <button
                   key={m}
                   onClick={() => switchMode(m)}
-                  className={`flex-1 py-2.5 text-sm font-black rounded-xl transition-all duration-300 ${mode === m
-                    ? "bg-white text-brand-600 shadow-sm"
-                    : "text-gray-400 hover:text-gray-600"
-                    }`}
+                  className={`flex-1 py-2.5 text-xs font-black tracking-wide uppercase rounded-xl transition-all duration-200 ${
+                    mode === m
+                      ? "bg-white text-black shadow-md shadow-gray-200/60"
+                      : "text-gray-500 hover:text-gray-800"
+                  }`}
                 >
                   {m === "login" ? "Login" : "Join Now"}
                 </button>
@@ -398,7 +446,7 @@ const DeliveryAuth = () => {
           )}
 
           {/* Form Body */}
-          <div className="p-6 pt-4 overflow-y-auto custom-scrollbar" data-lenis-prevent>
+          <div className="p-6 pt-4 overflow-y-auto custom-scrollbar pb-16" data-lenis-prevent>
             <AnimatePresence mode="wait">
               {step === "form" && (
                 <motion.div
@@ -421,7 +469,7 @@ const DeliveryAuth = () => {
                         >
                           {/* Profile Photo Capture */}
                           <div className="flex flex-col items-center justify-center py-2">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 self-start ml-1">Profile Photo</label>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 self-start ml-1">Profile Photo</label>
                             <div className="relative group">
                               <div className="w-24 h-24 rounded-3xl bg-brand-50 border-2 border-dashed border-brand-200 flex items-center justify-center overflow-hidden transition-all group-hover:border-brand-400">
                                 {profileImagePreview ? (
@@ -455,7 +503,7 @@ const DeliveryAuth = () => {
                           </div>
 
                           <div className="space-y-1.5">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
                             <div className="relative">
                               <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 w-4 h-4" />
                               <input
@@ -475,7 +523,7 @@ const DeliveryAuth = () => {
                           </div>
 
                           <div className="space-y-1.5">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Phone Number</label>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Phone Number</label>
                             <div className="relative">
                               <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 w-4 h-4" />
                               <span className="absolute left-10 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm border-r border-gray-200 pr-2.5">+91</span>
@@ -491,7 +539,7 @@ const DeliveryAuth = () => {
                           </div>
 
                           <div className="space-y-1.5">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
                             <div className="relative">
                               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 w-4 h-4" />
                               <input
@@ -505,7 +553,7 @@ const DeliveryAuth = () => {
                           </div>
 
                           <div className="space-y-1.5">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Permanent Address</label>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Permanent Address</label>
                             <div className="relative">
                               <MapPin className="absolute left-4 top-4 text-gray-300 w-4 h-4" />
                               <textarea
@@ -524,7 +572,7 @@ const DeliveryAuth = () => {
 
                           <div className="flex items-center gap-3">
                             <div className="space-y-1.5 flex-1">
-                              <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Date of Birth</label>
+                              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Date of Birth</label>
                               <div className="relative">
                                 <input
                                   type="date"
@@ -544,7 +592,7 @@ const DeliveryAuth = () => {
                               </div>
                             </div>
                             <div className="space-y-1.5 flex-1">
-                              <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-1">
+                              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-1">
                                 <span>Blood Group</span>
                                 <span className="font-normal text-[10px] text-gray-400 lowercase">(optional)</span>
                               </label>
@@ -570,7 +618,7 @@ const DeliveryAuth = () => {
                           </div>
 
                           <div className="space-y-1.5">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Preferred Delivery Area</label>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Preferred Delivery Area</label>
                             <div className="relative">
                               <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 w-4 h-4" />
                               <input
@@ -585,8 +633,28 @@ const DeliveryAuth = () => {
 
                           <button
                             onClick={() => {
-                              if (!signupName.trim() || !signupPhone || !signupEmail.trim() || !signupAddress.trim() || !signupDob || !profileImageFile) {
-                                toast.error("Please fill all required personal information fields and upload photo");
+                              if (!profileImageFile) {
+                                toast.error("Please upload a clear profile photo of your face");
+                                return;
+                              }
+                              if (!signupName.trim() || signupName.trim().length < 3) {
+                                toast.error("Please enter your full name (minimum 3 characters)");
+                                return;
+                              }
+                              if (!signupPhone || !/^[6-9]\d{9}$/.test(signupPhone)) {
+                                toast.error("Please enter a valid 10-digit Indian phone number starting with 6, 7, 8, or 9");
+                                return;
+                              }
+                              if (!signupEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupEmail.trim())) {
+                                toast.error("Please enter a valid email address");
+                                return;
+                              }
+                              if (!signupAddress.trim() || signupAddress.trim().length < 10) {
+                                toast.error("Please enter your complete permanent address (minimum 10 characters)");
+                                return;
+                              }
+                              if (!signupDob) {
+                                toast.error("Please select your date of birth");
                                 return;
                               }
                               const today = new Date().toISOString().split("T")[0];
@@ -594,12 +662,19 @@ const DeliveryAuth = () => {
                                 toast.error("Date of birth cannot be in the future");
                                 return;
                               }
-                              if (signupPhone.length !== 10) {
-                                toast.error("Please enter a valid 10-digit phone number");
+                              const dobDate = new Date(signupDob);
+                              const todayDate = new Date();
+                              let age = todayDate.getFullYear() - dobDate.getFullYear();
+                              const monthDiff = todayDate.getMonth() - dobDate.getMonth();
+                              if (monthDiff < 0 || (monthDiff === 0 && todayDate.getDate() < dobDate.getDate())) {
+                                age--;
+                              }
+                              if (age < 18) {
+                                toast.error("You must be at least 18 years old to register as a delivery partner");
                                 return;
                               }
-                              if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupEmail.trim())) {
-                                toast.error("Please enter a valid email address");
+                              if (!signupPreferredArea.trim() || signupPreferredArea.trim().length < 3) {
+                                toast.error("Please enter your preferred delivery area (minimum 3 characters)");
                                 return;
                               }
                               setSignupStep(2);
@@ -619,7 +694,7 @@ const DeliveryAuth = () => {
                           className="space-y-4"
                         >
                           <div className="space-y-1.5">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Vehicle Type</label>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Vehicle Type</label>
                             <div className="relative">
                               <Bike className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 w-4 h-4" />
                               <button
@@ -656,7 +731,7 @@ const DeliveryAuth = () => {
                           {signupVehicle !== 'cycle' && (
                             <>
                               <div className="space-y-1.5">
-                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Vehicle Plate Number</label>
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Vehicle Plate Number</label>
                             <div className="relative">
                               <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 w-4 h-4" />
                               <input
@@ -671,7 +746,7 @@ const DeliveryAuth = () => {
                           </div>
 
                           <div className="space-y-1.5">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Driving License Number</label>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Driving License Number</label>
                             <div className="relative">
                               <FileText className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 w-4 h-4" />
                               <input
@@ -732,7 +807,7 @@ const DeliveryAuth = () => {
                           className="space-y-4"
                         >
                           <div className="space-y-1.5">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Aadhar Number</label>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Aadhar Number</label>
                             <input
                               type="text"
                               value={signupAadharNumber}
@@ -742,7 +817,7 @@ const DeliveryAuth = () => {
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">PAN Card Number</label>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">PAN Card Number</label>
                             <input
                               type="text"
                               maxLength={10}
@@ -758,7 +833,7 @@ const DeliveryAuth = () => {
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Account Holder Name</label>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Account Holder Name</label>
                             <input
                               type="text"
                               value={signupAccountHolder}
@@ -773,7 +848,7 @@ const DeliveryAuth = () => {
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Account Number</label>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Account Number</label>
                             <input
                               type="text"
                               maxLength={18}
@@ -784,7 +859,7 @@ const DeliveryAuth = () => {
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">IFSC Code</label>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">IFSC Code</label>
                             <input
                               type="text"
                               maxLength={11}
@@ -809,24 +884,24 @@ const DeliveryAuth = () => {
                             </button>
                             <button
                               onClick={() => {
-                                if (!signupAadharNumber || !signupPanNumber || !signupAccountHolder.trim() || !signupAccountNumber || !signupIfsc) {
-                                  toast.error("Please fill all bank and identification fields");
+                                if (!signupAadharNumber || signupAadharNumber.length !== 12) {
+                                  toast.error("Please enter a valid 12-digit Aadhar number");
                                   return;
                                 }
-                                if (signupAadharNumber.length !== 12) {
-                                  toast.error("Aadhar number must be 12 digits");
+                                if (!signupPanNumber || !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(signupPanNumber)) {
+                                  toast.error("Please enter a valid 10-character PAN card number (e.g. ABCDE1234F)");
                                   return;
                                 }
-                                if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(signupPanNumber)) {
-                                  toast.error("Invalid PAN format (e.g. ABCDE1234F)");
+                                if (!signupAccountHolder.trim() || signupAccountHolder.trim().length < 3) {
+                                  toast.error("Please enter the bank account holder name (minimum 3 characters)");
                                   return;
                                 }
-                                if (signupAccountNumber.length < 9 || signupAccountNumber.length > 18) {
-                                  toast.error("Account Number must be between 9 and 18 digits");
+                                if (!signupAccountNumber || signupAccountNumber.length < 9 || signupAccountNumber.length > 18) {
+                                  toast.error("Please enter a valid bank account number (between 9 and 18 digits)");
                                   return;
                                 }
-                                if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(signupIfsc)) {
-                                  toast.error("Invalid IFSC format (e.g. HDFC0001234)");
+                                if (!signupIfsc || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(signupIfsc)) {
+                                  toast.error("Please enter a valid 11-character bank IFSC code (e.g. HDFC0001234)");
                                   return;
                                 }
                                 setSignupStep(4);

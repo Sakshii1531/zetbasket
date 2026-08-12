@@ -81,6 +81,25 @@ const PersonalDetails = () => {
   };
 
   const handleSave = async () => {
+    if (!formData.fullName.trim() || formData.fullName.trim().length < 3) {
+      toast.error("Please enter your full name (minimum 3 characters)");
+      return;
+    }
+    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    if (formData.address.trim() && formData.address.trim().length < 10) {
+      toast.error("Please enter your full address (minimum 10 characters)");
+      return;
+    }
+    if (formData.dob) {
+      const today = new Date().toISOString().split("T")[0];
+      if (formData.dob > today) {
+        toast.error("Date of birth cannot be in the future");
+        return;
+      }
+    }
     try {
       setIsSaving(true);
       const payload = {

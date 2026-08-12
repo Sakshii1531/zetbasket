@@ -49,7 +49,23 @@ const DeliveryLayout = () => {
   const locationRequestRef = useRef({ inFlight: false, controller: null });
   const orderRingtoneRef = useRef(null);
   const ringtoneRetryTimerRef = useRef(null);
-  const ringtoneUnlockHandlerRef = useRef(null);
+  useEffect(() => {
+    const handleFocusIn = (e) => {
+      const target = e.target;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT")
+      ) {
+        setTimeout(() => {
+          target.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 300);
+      }
+    };
+    window.addEventListener("focusin", handleFocusIn);
+    return () => window.removeEventListener("focusin", handleFocusIn);
+  }, []);
 
   const getOrderRingtone = () => {
     if (!orderRingtoneRef.current) {
