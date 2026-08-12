@@ -126,9 +126,9 @@ const AdminAuth = () => {
     };
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-[#f3f6ff] p-6 font-['Outfit',_sans-serif]">
+        <div className="relative h-screen w-full overflow-hidden flex flex-col items-center justify-center p-4 md:p-6 bg-[#f3f6ff] font-['Outfit',_sans-serif]">
             {/* Background Decorations */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
                 <div className="absolute top-[-20%] left-[-10%] w-[800px] h-[800px] bg-brand-50 opacity-40 rounded-full blur-[120px]"></div>
                 <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-white opacity-60 rounded-full blur-[100px]"></div>
             </div>
@@ -138,10 +138,10 @@ const AdminAuth = () => {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.5, type: "spring", bounce: 0.3 }}
-                className="relative w-full max-w-[1050px] min-h-[650px] bg-white rounded-[50px] shadow-[0_40px_120px_rgba(0,0,0,0.06)] overflow-hidden flex flex-col md:flex-row border border-white"
+                className="relative z-10 w-full max-w-[1050px] max-h-[calc(100vh-80px)] bg-white rounded-[40px] md:rounded-[50px] shadow-[0_40px_120px_rgba(0,0,0,0.06)] overflow-hidden flex flex-col md:flex-row border border-white"
             >
                 {/* Left Side: Form */}
-                <div className="w-full md:w-[45%] p-12 md:p-20 flex flex-col justify-center relative z-10 bg-white">
+                <div className="w-full md:w-[45%] p-8 md:p-12 flex flex-col justify-center relative z-10 bg-white overflow-y-auto">
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={isLogin ? 'login' : 'signup'}
@@ -149,23 +149,23 @@ const AdminAuth = () => {
                             animate={{ x: 0, opacity: 1 }}
                             exit={{ x: 30, opacity: 0 }}
                             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                            className="space-y-10"
+                            className="space-y-8"
                         >
-                            <div className="space-y-3">
+                            <div className="space-y-2">
                                 <motion.h1
-                                    className="text-5xl font-black text-brand-900 tracking-tight"
+                                    className="text-4xl md:text-5xl font-black text-brand-900 tracking-tight"
                                     layoutId="auth-title"
                                 >
                                     {isLogin ? 'Login' : 'Sign Up'}
                                 </motion.h1>
-                                <p className="text-gray-400 font-medium text-base">
+                                <p className="text-gray-400 font-medium text-sm md:text-base">
                                     {isLogin
                                         ? `Welcome to ${appName} Admin Platform`
                                         : 'Start managing your platform today'}
                                 </p>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="space-y-5">
+                            <form onSubmit={handleSubmit} className="space-y-4">
                                 <AnimatePresence mode="popLayout">
                                     {!isLogin && (
                                         <motion.div
@@ -189,7 +189,7 @@ const AdminAuth = () => {
                                                     handleChange(e);
                                                 }}
                                                 placeholder="Full Name"
-                                                className="w-full pl-14 pr-5 py-5 bg-[#f8f9ff] border-2 border-transparent rounded-[24px] text-sm font-bold text-gray-700 outline-none focus:bg-white focus:border-brand-100 focus:ring-8 focus:ring-brand-50/50 transition-all placeholder:text-gray-300"
+                                                className="w-full pl-14 pr-5 py-4 bg-[#f8f9ff] border-2 border-transparent rounded-[24px] text-sm font-bold text-gray-700 outline-none focus:bg-white focus:border-brand-100 focus:ring-8 focus:ring-brand-50/50 transition-all placeholder:text-gray-300"
                                             />
                                         </motion.div>
                                     )}
@@ -206,7 +206,7 @@ const AdminAuth = () => {
                                         value={formData.email}
                                         onChange={handleChange}
                                         placeholder="Username or email"
-                                        className="w-full pl-14 pr-5 py-5 bg-[#f8f9ff] border-2 border-transparent rounded-[24px] text-sm font-bold text-gray-700 outline-none focus:bg-white focus:border-brand-100 focus:ring-8 focus:ring-brand-50/50 transition-all placeholder:text-gray-300"
+                                        className="w-full pl-14 pr-5 py-4 bg-[#f8f9ff] border-2 border-transparent rounded-[24px] text-sm font-bold text-gray-700 outline-none focus:bg-white focus:border-brand-100 focus:ring-8 focus:ring-brand-50/50 transition-all placeholder:text-gray-300"
                                     />
                                 </div>
 
@@ -224,7 +224,7 @@ const AdminAuth = () => {
                                         value={formData.password}
                                         onChange={handleChange}
                                         placeholder="Password (min 10 chars)"
-                                        className="w-full pl-14 pr-14 py-5 bg-[#f8f9ff] border-2 border-transparent rounded-[24px] text-sm font-bold text-gray-700 outline-none focus:bg-white focus:border-brand-100 focus:ring-8 focus:ring-brand-50/50 transition-all placeholder:text-gray-300"
+                                        className="w-full pl-14 pr-14 py-4 bg-[#f8f9ff] border-2 border-transparent rounded-[24px] text-sm font-bold text-gray-700 outline-none focus:bg-white focus:border-brand-100 focus:ring-8 focus:ring-brand-50/50 transition-all placeholder:text-gray-300"
                                     />
                                     <button
                                         type="button"
@@ -238,7 +238,7 @@ const AdminAuth = () => {
                                 <button
                                     type="submit"
                                     disabled={isLoading}
-                                    className="w-full bg-black  text-primary-foreground rounded-[24px] py-5 text-base font-black shadow-2xl shadow-brand-200 hover:bg-brand-700 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+                                    className="w-full bg-black  text-primary-foreground rounded-[24px] py-4 text-base font-black shadow-2xl shadow-brand-200 hover:bg-brand-700 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-3"
                                 >
                                     {isLoading ? (
                                         <motion.div
@@ -307,10 +307,10 @@ const AdminAuth = () => {
             </motion.div>
 
             {/* Verification Label */}
-            <div className="absolute bottom-8 text-gray-400 font-bold text-[10px] tracking-[5px] uppercase flex items-center gap-3">
-                <div className="w-8 h-[1px] bg-gray-200"></div>
-                {`Protected by ${appName} Security`}
-                <div className="w-8 h-[1px] bg-gray-200"></div>
+            <div className="absolute bottom-3 md:bottom-4 z-20 text-slate-600 font-bold text-[10px] sm:text-[11px] tracking-[4px] uppercase flex items-center justify-center gap-3 text-center whitespace-nowrap">
+                <div className="w-8 h-[1px] bg-slate-300"></div>
+                <span>{`Protected by ${appName} Security`}</span>
+                <div className="w-8 h-[1px] bg-slate-300"></div>
             </div>
         </div>
     );

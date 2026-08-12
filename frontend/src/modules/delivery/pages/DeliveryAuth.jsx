@@ -464,10 +464,11 @@ const DeliveryAuth = () => {
                                 onChange={(e) => {
                                   const val = e.target.value;
                                   if (/^[a-zA-Z\s]*$/.test(val)) {
-                                    setSignupName(val);
+                                    const capitalized = val.replace(/\b\w/g, (c) => c.toUpperCase());
+                                    setSignupName(capitalized);
                                   }
                                 }}
-                                className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
+                                className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all capitalize"
                                 placeholder="Enter your full name"
                               />
                             </div>
@@ -528,13 +529,25 @@ const DeliveryAuth = () => {
                                 <input
                                   type="date"
                                   value={signupDob}
-                                  onChange={(e) => setSignupDob(e.target.value)}
+                                  max={new Date().toISOString().split("T")[0]}
+                                  onChange={(e) => {
+                                    const selectedDate = e.target.value;
+                                    const today = new Date().toISOString().split("T")[0];
+                                    if (selectedDate && selectedDate > today) {
+                                      toast.error("Date of birth cannot be in the future");
+                                      return;
+                                    }
+                                    setSignupDob(selectedDate);
+                                  }}
                                   className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
                                 />
                               </div>
                             </div>
                             <div className="space-y-1.5 flex-1">
-                              <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Blood Group</label>
+                              <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-1">
+                                <span>Blood Group</span>
+                                <span className="font-normal text-[10px] text-gray-400 lowercase">(optional)</span>
+                              </label>
                               <div className="relative">
                                 <select
                                   value={signupBloodGroup}
@@ -572,8 +585,13 @@ const DeliveryAuth = () => {
 
                           <button
                             onClick={() => {
-                              if (!signupName.trim() || !signupPhone || !signupEmail.trim() || !signupAddress.trim() || !signupDob || !signupBloodGroup || !profileImageFile) {
-                                toast.error("Please fill all personal information fields and upload photo");
+                              if (!signupName.trim() || !signupPhone || !signupEmail.trim() || !signupAddress.trim() || !signupDob || !profileImageFile) {
+                                toast.error("Please fill all required personal information fields and upload photo");
+                                return;
+                              }
+                              const today = new Date().toISOString().split("T")[0];
+                              if (signupDob > today) {
+                                toast.error("Date of birth cannot be in the future");
                                 return;
                               }
                               if (signupPhone.length !== 10) {

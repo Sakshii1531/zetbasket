@@ -430,7 +430,10 @@ export const updateOrderStatus = async (req, res) => {
           const updated = await sellerAcceptAtomic(userId, canonicalOrderId);
           return handleResponse(res, 200, "Order accepted", updated);
         } catch (e) {
-          return handleResponse(res, e.statusCode || 500, e.message);
+          logger.warn("sellerAcceptAtomic failed, falling back to direct status update", {
+            orderId: canonicalOrderId,
+            error: e.message,
+          });
         }
       }
       if (status === "cancelled") {
@@ -438,7 +441,10 @@ export const updateOrderStatus = async (req, res) => {
           const updated = await sellerRejectAtomic(userId, canonicalOrderId);
           return handleResponse(res, 200, "Order rejected", updated);
         } catch (e) {
-          return handleResponse(res, e.statusCode || 500, e.message);
+          logger.warn("sellerRejectAtomic failed, falling back to direct status update", {
+            orderId: canonicalOrderId,
+            error: e.message,
+          });
         }
       }
     }

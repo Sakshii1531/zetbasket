@@ -613,23 +613,25 @@ const Orders = () => {
                                                             >
                                                                 <HiOutlineEye className="h-4 w-4" />
                                                             </button>
-                                                            {order.status === 'Pending' && (
+                                                            {order.status.toLowerCase() === 'pending' && (
                                                                 <>
                                                                     <button
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();
-                                                                            handleStatusUpdate(order.id, 'Processing');
+                                                                            handleStatusUpdate(order.id, 'confirmed');
                                                                         }}
                                                                         className="p-1.5 hover:bg-brand-50 hover:text-brand-600 rounded-lg transition-all text-slate-600 shadow-sm ring-1 ring-slate-100"
+                                                                        title="Confirm Order"
                                                                     >
                                                                         <HiOutlineCheck className="h-4 w-4" />
                                                                     </button>
                                                                     <button
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();
-                                                                            handleStatusUpdate(order.id, 'Cancelled');
+                                                                            handleStatusUpdate(order.id, 'cancelled');
                                                                         }}
                                                                         className="p-1.5 hover:bg-rose-50 hover:text-rose-600 rounded-lg transition-all text-slate-600 shadow-sm ring-1 ring-slate-100"
+                                                                        title="Cancel Order"
                                                                     >
                                                                         <HiOutlineXMark className="h-4 w-4" />
                                                                     </button>
