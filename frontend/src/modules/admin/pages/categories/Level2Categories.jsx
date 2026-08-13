@@ -49,6 +49,8 @@ const Level2Categories = () => {
     status: "active",
     type: "category",
     parentId: "",
+    adminCommission: "0",
+    handlingFees: "0",
   });
 
   const [imageFile, setImageFile] = useState(null);
@@ -207,6 +209,8 @@ const Level2Categories = () => {
       status: "active",
       type: "category",
       parentId: "",
+      adminCommission: "0",
+      handlingFees: "0",
     });
     setImageFile(null);
     setPreviewUrl(null);
@@ -222,6 +226,8 @@ const Level2Categories = () => {
       status: item.status,
       type: "category",
       parentId: item.parentId?._id || item.parentId || "",
+      adminCommission: String(item.adminCommission ?? 0),
+      handlingFees: String(item.handlingFees ?? 0),
     });
     setPreviewUrl(item.image || null);
     setIsAddModalOpen(true);
@@ -371,6 +377,12 @@ const Level2Categories = () => {
                   Slug
                 </th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Commission
+                </th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Handling Fee
+                </th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -381,13 +393,13 @@ const Level2Categories = () => {
             <tbody className="divide-y divide-gray-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-8 text-gray-500">
+                  <td colSpan="9" className="text-center py-8 text-gray-500">
                     Loading...
                   </td>
                 </tr>
               ) : filteredCategories.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-8 text-gray-500">
+                  <td colSpan="9" className="text-center py-8 text-gray-500">
                     No categories found
                   </td>
                 </tr>
@@ -406,15 +418,23 @@ const Level2Categories = () => {
                     </td>
                     <td className="py-3 px-4">
                       <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center border border-gray-200">
-                        {cat.image ? (
-                          <img
-                            src={typeof cat.image === 'string' ? cat.image : (cat.image.url || cat.image.secure_url || cat.image)}
-                            alt={cat.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <Image className="w-5 h-5 text-gray-400" />
-                        )}
+                        {(() => {
+                          const imgSrc = typeof cat.image === 'string' ? cat.image : (cat.image?.url || cat.image?.secure_url || cat.icon || cat.imageUrl || (typeof cat.icon === 'string' ? cat.icon : null));
+                          return imgSrc ? (
+                            <img
+                              src={imgSrc}
+                              alt={cat.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.style.display = 'none';
+                                e.target.nextSibling && (e.target.nextSibling.style.display = 'block');
+                              }}
+                            />
+                          ) : (
+                            <Image className="w-5 h-5 text-gray-400" />
+                          );
+                        })()}
                       </div>
                     </td>
                     <td className="py-3 px-4 font-medium text-gray-900">
@@ -428,6 +448,12 @@ const Level2Categories = () => {
                       </Badge>
                     </td>
                     <td className="py-3 px-4 text-gray-500">{cat.slug}</td>
+                    <td className="py-3 px-4 text-gray-700 font-bold text-xs">
+                      {cat.adminCommission ?? 0}%
+                    </td>
+                    <td className="py-3 px-4 text-gray-700 font-bold text-xs">
+                      ₹{cat.handlingFees ?? 0}
+                    </td>
                     <td className="py-3 px-4">
                       <Badge
                         variant={
@@ -588,6 +614,40 @@ const Level2Categories = () => {
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      Admin Commission (%)
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.adminCommission}
+                      onChange={(e) =>
+                        setFormData({ ...formData, adminCommission: e.target.value })
+                      }
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                      placeholder="0"
+                      min="0"
+                      max="100"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      Handling Fees (₹)
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.handlingFees}
+                      onChange={(e) =>
+                        setFormData({ ...formData, handlingFees: e.target.value })
+                      }
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                      placeholder="0"
+                      min="0"
+                    />
+                  </div>
                 </div>
               </div>
 

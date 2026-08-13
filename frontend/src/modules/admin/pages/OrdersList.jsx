@@ -454,24 +454,33 @@ const OrdersList = () => {
                                         </div>
                                     </td>
                                     <td className="px-4 py-5" onClick={(e) => e.stopPropagation()}>
-                                        <div className="relative inline-block w-40">
-                                            <select
-                                                value={order.status}
-                                                onChange={(e) => handleStatusUpdate(order._id, e.target.value)}
-                                                className={cn(
-                                                    "w-full text-[10px] pl-3 pr-8 py-2 rounded-xl font-black uppercase tracking-wider border appearance-none cursor-pointer focus:ring-2 focus:ring-offset-1 transition-all outline-none shadow-sm",
-                                                    getStatusStyles(order.status)
-                                                )}
-                                            >
-                                                <option value="pending">Pending</option>
-                                                <option value="confirmed">Confirmed</option>
-                                                <option value="packed">Packed</option>
-                                                <option value="out_for_delivery">Out for Delivery</option>
-                                                <option value="delivered">Delivered</option>
-                                                <option value="cancelled">Cancelled</option>
-                                            </select>
-                                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none opacity-60" />
-                                        </div>
+                                        {['delivered', 'cancelled'].includes(String(order.status || '').toLowerCase()) ? (
+                                            <span className={cn(
+                                                "inline-block text-[10px] px-3 py-1.5 rounded-xl font-black uppercase tracking-wider border shadow-sm",
+                                                getStatusStyles(order.status)
+                                            )}>
+                                                {order.status.replace(/_/g, ' ')}
+                                            </span>
+                                        ) : (
+                                            <div className="relative inline-block w-40">
+                                                <select
+                                                    value={order.status}
+                                                    onChange={(e) => handleStatusUpdate(order._id, e.target.value)}
+                                                    className={cn(
+                                                        "w-full text-[10px] pl-3 pr-8 py-2 rounded-xl font-black uppercase tracking-wider border appearance-none cursor-pointer focus:ring-2 focus:ring-offset-1 transition-all outline-none shadow-sm",
+                                                        getStatusStyles(order.status)
+                                                    )}
+                                                >
+                                                    <option value="pending" disabled={['confirmed','packed','out_for_delivery','delivered','cancelled'].includes(String(order.status || '').toLowerCase())}>Pending</option>
+                                                    <option value="confirmed" disabled={['packed','out_for_delivery','delivered','cancelled'].includes(String(order.status || '').toLowerCase())}>Confirmed</option>
+                                                    <option value="packed" disabled={['out_for_delivery','delivered','cancelled'].includes(String(order.status || '').toLowerCase())}>Packed</option>
+                                                    <option value="out_for_delivery" disabled={['delivered','cancelled'].includes(String(order.status || '').toLowerCase())}>Out for Delivery</option>
+                                                    <option value="delivered">Delivered</option>
+                                                    <option value="cancelled">Cancelled</option>
+                                                </select>
+                                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none opacity-60" />
+                                            </div>
+                                        )}
                                     </td>
                                     <td className="px-4 py-5 text-right">
                                         <div className="flex flex-col items-end">

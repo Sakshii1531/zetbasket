@@ -121,6 +121,11 @@ const Orders = () => {
                     image: item.image
                 })),
                 total: Math.ceil(order.pricing?.total || 0),
+                productSubtotal: Math.ceil(order.paymentBreakdown?.productSubtotal || order.pricing?.subtotal || (order.items || []).reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0)),
+                adminCommission: Math.ceil(order.paymentBreakdown?.adminProductCommissionTotal || 0),
+                sellerPayout: Math.ceil(order.paymentBreakdown?.sellerPayoutTotal || (order.pricing?.subtotal || (order.items || []).reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0)) - (order.paymentBreakdown?.adminProductCommissionTotal || 0)),
+                deliveryFee: Math.ceil(order.paymentBreakdown?.deliveryFeeCharged || order.pricing?.deliveryFee || 0),
+                taxTotal: Math.ceil(order.paymentBreakdown?.taxTotal || order.pricing?.gst || 0),
                 status: getLegacyStatusFromOrder(order),
                 workflowStatus: order.workflowStatus,
                 workflowVersion: order.workflowVersion,
@@ -584,8 +589,10 @@ const Orders = () => {
                                                             <select
                                                                 value={order.status}
                                                                 onChange={(e) => handleStatusUpdate(order.id, e.target.value)}
+                                                                disabled={['delivered', 'cancelled'].includes(order.status.toLowerCase())}
                                                                 className={cn(
-                                                                    "w-full text-[10px] pl-2.5 pr-8 py-1.5 rounded-full font-black uppercase tracking-widest cursor-pointer appearance-none focus:ring-2 focus:ring-offset-1 transition-all border-none outline-none shadow-sm",
+                                                                    "w-full text-[10px] pl-2.5 pr-8 py-1.5 rounded-full font-black uppercase tracking-widest appearance-none focus:ring-2 focus:ring-offset-1 transition-all border-none outline-none shadow-sm",
+                                                                    ['delivered', 'cancelled'].includes(order.status.toLowerCase()) ? "cursor-not-allowed opacity-90" : "cursor-pointer",
                                                                     order.status === 'pending' ? "bg-amber-100 text-amber-700 focus:ring-amber-200" :
                                                                         order.status === 'confirmed' ? "bg-brand-100 text-brand-700 focus:ring-brand-200" :
                                                                             order.status === 'packed' ? "bg-brand-100 text-brand-700 focus:ring-brand-200" :
@@ -600,7 +607,7 @@ const Orders = () => {
                                                                 <option value="packed" disabled={['out_for_delivery','delivered','cancelled'].includes(order.status)}>Packed</option>
                                                                 <option value="out_for_delivery" disabled={['delivered','cancelled'].includes(order.status)}>Out for Delivery</option>
                                                                 <option value="delivered" disabled={order.status === 'cancelled'}>Delivered</option>
-                                                                <option value="cancelled">Cancelled</option>
+                                                                <option value="cancelled" disabled={order.status === 'delivered'}>Cancelled</option>
                                                             </select>
                                                             <HiOutlineChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none opacity-60" />
                                                         </div>
@@ -836,22 +843,33 @@ const Orders = () => {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="space-y-3 sm:space-y-4">
-                                                <div className="bg-primary/5 p-3 sm:p-4 rounded-3xl border border-primary/10">
-                                                    <h4 className="text-xs font-black text-primary uppercase tracking-widest mb-3">Order Summary</h4>
-                                                    <div className="space-y-2">
-                                                        <div className="flex justify-between text-xs">
-                                                            <span className="font-bold text-slate-600">Subtotal</span>
-                                                            <span className="font-black text-slate-900">₹{Math.ceil(selectedOrder.items.reduce((s, i) => s + i.price * i.qty, 0))}</span>
+                                            <div className="space-y-4">
+                                                <div className="bg-slate-900 p-4 rounded-3xl text-white border border-slate-800 shadow-xl relative overflow-hidden">
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <h4 className="text-xs font-black text-emerald-400 uppercase tracking-widest">Earnings Breakdown</h4>
+                                                        <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full">Seller Share</span>
+                                                    </div>
+                                                    <div className="space-y-2 text-xs">
+                                                        <div className="flex justify-between text-slate-300">
+                                                            <span className="font-semibold">Item Subtotal</span>
+                                                            <span className="font-bold text-white">₹{selectedOrder.productSubtotal || Math.ceil(selectedOrder.items.reduce((s, i) => s + i.price * i.qty, 0))}</span>
                                                         </div>
-                                                        <div className="flex justify-between text-xs">
-                                                            <span className="font-bold text-slate-600">Delivery Fee</span>
-                                                            <span className="font-black text-brand-600">₹{Math.ceil(selectedOrder.total - selectedOrder.items.reduce((s, i) => s + i.price * i.qty, 0))}</span>
+                                                        {selectedOrder.adminCommission > 0 && (
+                                                            <div className="flex justify-between text-rose-300">
+                                                                <span className="font-semibold">Platform Commission</span>
+                                                                <span className="font-bold">- ₹{selectedOrder.adminCommission}</span>
+                                                            </div>
+                                                        )}
+                                                        <div className="h-px bg-slate-800 my-2" />
+                                                        <div className="flex justify-between items-center bg-emerald-500/10 p-2.5 rounded-2xl border border-emerald-500/20">
+                                                            <div>
+                                                                <p className="text-[10px] font-bold text-emerald-400 uppercase">Your Net Earning</p>
+                                                                <p className="text-[10px] text-slate-400">Credited to Balance</p>
+                                                            </div>
+                                                            <span className="text-base font-black text-emerald-400">₹{selectedOrder.sellerPayout || selectedOrder.productSubtotal}</span>
                                                         </div>
-                                                        <div className="h-px bg-primary/10 my-2" />
-                                                        <div className="flex justify-between text-sm">
-                                                            <span className="font-black text-slate-900">Total</span>
-                                                            <span className="font-black text-primary">₹{selectedOrder.total}</span>
+                                                        <div className="pt-1 flex justify-between text-[11px] text-slate-400">
+                                                            <span>Customer Bill Total: <strong className="text-slate-200">₹{selectedOrder.total}</strong></span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -894,8 +912,10 @@ const Orders = () => {
                                                 <select
                                                     value={selectedOrder.status.toLowerCase()}
                                                     onChange={(e) => handleStatusUpdate(selectedOrder.id, e.target.value)}
+                                                    disabled={['delivered', 'cancelled'].includes(selectedOrder.status.toLowerCase())}
                                                     className={cn(
-                                                        "w-full text-xs pl-3 pr-8 py-2 rounded-xl font-black uppercase tracking-wider border appearance-none cursor-pointer focus:ring-2 focus:ring-offset-1 transition-all outline-none shadow-sm",
+                                                        "w-full text-xs pl-3 pr-8 py-2 rounded-xl font-black uppercase tracking-wider border appearance-none focus:ring-2 focus:ring-offset-1 transition-all outline-none shadow-sm",
+                                                        ['delivered', 'cancelled'].includes(selectedOrder.status.toLowerCase()) ? "cursor-not-allowed opacity-90" : "cursor-pointer",
                                                         getStatusColor(selectedOrder.status) === 'warning' ? "bg-amber-100 text-amber-700 focus:ring-amber-200" :
                                                             getStatusColor(selectedOrder.status) === 'info' ? "bg-brand-100 text-brand-700 focus:ring-brand-200" :
                                                                 getStatusColor(selectedOrder.status) === 'primary' ? "bg-brand-100 text-brand-700 focus:ring-brand-200" :
@@ -910,7 +930,7 @@ const Orders = () => {
                                                     <option value="packed" disabled={['out_for_delivery','delivered','cancelled'].includes(selectedOrder.status.toLowerCase())}>Packed</option>
                                                     <option value="out_for_delivery" disabled={['delivered','cancelled'].includes(selectedOrder.status.toLowerCase())}>Out for Delivery</option>
                                                     <option value="delivered" disabled={selectedOrder.status.toLowerCase() === 'cancelled'}>Delivered</option>
-                                                    <option value="cancelled">Cancelled</option>
+                                                    <option value="cancelled" disabled={selectedOrder.status.toLowerCase() === 'delivered'}>Cancelled</option>
                                                 </select>
                                                 <HiOutlineChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none opacity-60" />
                                             </div>

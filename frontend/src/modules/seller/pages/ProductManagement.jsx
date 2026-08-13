@@ -327,6 +327,17 @@ const ProductManagement = () => {
         return;
       }
 
+      const invalidVariant = (formData.variants || []).find((v) => {
+        const p = Number(v.price || formData.price || 0);
+        const s = Number(v.salePrice || formData.salePrice || 0);
+        return s > 0 && s > p;
+      });
+
+      if (invalidVariant) {
+        toast.error("Sale price cannot be greater than original price");
+        return;
+      }
+
       if (formData.returnPolicy?.isReturnable) {
         if (!formData.returnPolicy.returnWindowDays || Number(formData.returnPolicy.returnWindowDays) <= 0 || Number(formData.returnPolicy.returnWindowDays) > 30) {
           toast.error("Please enter a valid Return Window (1 to 30 days).");
@@ -1254,7 +1265,16 @@ const ProductManagement = () => {
                         <h4 className="text-sm font-bold">Product Variants</h4>
                         <button
                           type="button"
-                          onClick={() =>
+                          onClick={() => {
+                            const invalid = (formData.variants || []).find((v) => {
+                              const p = Number(v.price || 0);
+                              const s = Number(v.salePrice || 0);
+                              return s > 0 && p > 0 && s > p;
+                            });
+                            if (invalid) {
+                              toast.error("Please fix Sale Price before adding another variant.");
+                              return;
+                            }
                             setFormData((prev) => ({
                               ...prev,
                               variants: [
@@ -1268,8 +1288,8 @@ const ProductManagement = () => {
                                   sku: makeSku(prev.name, prev.variants.length + 1),
                                 },
                               ],
-                            }))
-                          }
+                            }));
+                          }}
                           className="bg-primary/10 text-primary px-3 py-1 rounded-lg text-[10px] font-bold">+ ADD</button>
                       </div>
                       <div className="space-y-3">
@@ -1285,7 +1305,7 @@ const ProductManagement = () => {
                             </div>
                             <div className="space-y-1">
                               <label className="text-[8px] font-bold text-slate-600 uppercase tracking-widest ml-1">Price</label>
-                              <input type="number" min="0" value={v.price} onChange={e => {
+                              <input type="number" min="0" onKeyDown={(e) => ['-', '+', 'e', 'E'].includes(e.key) && e.preventDefault()} value={v.price} onChange={e => {
                                 const val = e.target.value;
                                 if (val !== '' && Number(val) < 0) return;
                                 const news = [...formData.variants];
@@ -1295,13 +1315,22 @@ const ProductManagement = () => {
                             </div>
                             <div className="space-y-1">
                               <label className="text-[8px] font-bold text-brand-400 uppercase tracking-widest ml-1">Sale Price</label>
-                              <input type="number" min="0" value={v.salePrice} onChange={e => {
+                              <input type="number" min="0" onKeyDown={(e) => ['-', '+', 'e', 'E'].includes(e.key) && e.preventDefault()} value={v.salePrice} onChange={e => {
                                 const val = e.target.value;
                                 if (val !== '' && Number(val) < 0) return;
+                                const p = Number(v.price || 0);
+                                const s = Number(val || 0);
+                                if (s > 0 && p > 0 && s > p) {
+                                  toast.error("Sale price cannot be more than Original Price (MRP).");
+                                }
                                 const news = [...formData.variants];
                                 news[i].salePrice = val;
                                 setFormData({ ...formData, variants: news });
-                              }} placeholder="Sale" className="w-full bg-brand-50/50 px-3 py-2 rounded-xl text-xs ring-1 ring-brand-100 text-brand-700 outline-none" />
+                              }} placeholder="Sale" className={`w-full px-3 py-2 rounded-xl text-xs outline-none transition-all ${
+                                Number(v.salePrice || 0) > Number(v.price || 0) && Number(v.salePrice || 0) > 0 && Number(v.price || 0) > 0
+                                  ? "bg-rose-50 ring-2 ring-rose-500 text-rose-700 font-bold"
+                                  : "bg-brand-50/50 ring-1 ring-brand-100 text-brand-700 font-semibold"
+                              }`} />
                             </div>
                             <div className="space-y-1">
                               <label className="text-[8px] font-bold text-slate-600 uppercase tracking-widest ml-1">Stock</label>

@@ -141,6 +141,17 @@ const AddProduct = () => {
       return;
     }
 
+    const invalidVariant = formData.variants.find((v) => {
+      const p = Number(v.price || 0);
+      const s = Number(v.salePrice || 0);
+      return s > 0 && s > p;
+    });
+
+    if (invalidVariant) {
+      toast.error("Sale price cannot be greater than original price");
+      return;
+    }
+
     if (formData.returnPolicy?.isReturnable) {
       if (!formData.returnPolicy.returnWindowDays || Number(formData.returnPolicy.returnWindowDays) <= 0 || Number(formData.returnPolicy.returnWindowDays) > 30) {
         toast.error("Please enter a valid Return Window (1 to 30 days).");
@@ -394,7 +405,16 @@ const AddProduct = () => {
                   </p>
                 </div>
                 <button
-                  onClick={() =>
+                  onClick={() => {
+                    const invalid = (formData.variants || []).find((v) => {
+                      const p = Number(v.price || 0);
+                      const s = Number(v.salePrice || 0);
+                      return s > 0 && p > 0 && s > p;
+                    });
+                    if (invalid) {
+                      toast.error("Please fix Sale Price before adding another variant.");
+                      return;
+                    }
                     setFormData((prev) => ({
                       ...prev,
                       variants: [
@@ -408,8 +428,8 @@ const AddProduct = () => {
                           sku: makeSku(prev.name, prev.variants.length + 1),
                         },
                       ],
-                    }))
-                  }
+                    }));
+                  }}
                   className="flex items-center space-x-2 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-[10px] font-bold hover:bg-primary/20 transition-all">
                   <HiOutlineSquaresPlus className="h-4 w-4" />
                   <span>ADD VARIANT</span>
@@ -484,12 +504,21 @@ const AddProduct = () => {
                         onChange={(e) => {
                           const val = e.target.value;
                           if (val !== '' && Number(val) < 0) return;
+                          const p = Number(variant.price || 0);
+                          const s = Number(val || 0);
+                          if (s > 0 && p > 0 && s > p) {
+                            toast.error("Sale price cannot be more than Original Price (MRP).");
+                          }
                           const newVariants = [...formData.variants];
                           newVariants[index].salePrice = val;
                           setFormData({ ...formData, variants: newVariants });
                         }}
                         placeholder="450"
-                        className="w-full px-3 py-2 bg-brand-50 ring-1 ring-brand-100 border-none rounded-xl text-xs font-bold text-brand-700 outline-none focus:ring-2 focus:ring-brand-200"
+                        className={`w-full px-3 py-2 border-none rounded-xl text-xs font-bold outline-none transition-all ${
+                          Number(variant.salePrice || 0) > Number(variant.price || 0) && Number(variant.salePrice || 0) > 0 && Number(variant.price || 0) > 0
+                            ? "bg-rose-50 ring-2 ring-rose-500 text-rose-700"
+                            : "bg-brand-50 ring-1 ring-brand-100 text-brand-700 focus:ring-2 focus:ring-brand-200"
+                        }`}
                       />
                     </div>
                     <div className="col-span-6 md:col-span-2 space-y-1">

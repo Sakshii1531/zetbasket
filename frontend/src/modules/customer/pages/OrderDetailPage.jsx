@@ -297,6 +297,14 @@ const OrderDetailPage = () => {
     const offOtp = onCustomerOtp(getToken, (payload) => {
       if (matchesOrderIdentifier(payload?.orderId, identifiersRef.current) && (payload?.code || payload?.otp)) {
         setHandoffOtp(payload.code || payload.otp);
+        setOrder((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            workflowStatus: prev.workflowStatus || "OUT_FOR_DELIVERY",
+            status: prev.status === "delivered" ? "delivered" : (prev.status === "cancelled" ? "cancelled" : "out_for_delivery"),
+          };
+        });
         toast.info("Delivery OTP received — share with rider if asked.");
       }
     });

@@ -76,7 +76,14 @@ export function getLegacyStatusFromOrder(order) {
   }
 
   const riderStep = Number(order.deliveryRiderStep) || 0;
-  if (riderStep >= 3 || order.outForDeliveryAt || order.pickupConfirmedAt) {
+  if (
+    riderStep >= 3 ||
+    order.outForDeliveryAt ||
+    order.pickupConfirmedAt ||
+    order.deliveryOtp ||
+    order.deliveryOtpDetails?.code ||
+    order.otp
+  ) {
     return "out_for_delivery";
   }
   if (riderStep >= 1 || order.assignedAt || order.pickupReadyAt || order.deliveryBoy) {

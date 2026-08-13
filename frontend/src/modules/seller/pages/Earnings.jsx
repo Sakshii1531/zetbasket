@@ -175,6 +175,26 @@ const Earnings = () => {
         </BlurFade>
       </div>
 
+      <BlurFade delay={0.35}>
+        <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-brand-500/10 border border-emerald-500/20 rounded-3xl p-5 backdrop-blur-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-2xl bg-emerald-500/20 text-emerald-600 flex items-center justify-center font-bold text-lg shrink-0">
+              💡
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-slate-900">How Seller Earnings Are Calculated?</h4>
+              <p className="text-xs text-slate-600 font-medium mt-0.5">
+                Your Net Earning = <strong className="text-emerald-700 font-bold">Item Subtotal</strong> − <strong className="text-rose-600 font-bold">Platform Commission</strong>. Delivery Fee & GST are managed separately by platform/rider services.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 bg-white px-3.5 py-2 rounded-2xl border border-slate-200 text-xs font-bold text-slate-700 shadow-sm shrink-0">
+            <span>Commission Rate:</span>
+            <span className="text-brand-600 font-black">Category-based %</span>
+          </div>
+        </div>
+      </BlurFade>
+
       <BlurFade delay={0.4}>
         <Card className="p-6 border-none shadow-md bg-white">
           <div className="flex justify-between items-center mb-6">
