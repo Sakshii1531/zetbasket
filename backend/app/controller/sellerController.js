@@ -69,10 +69,10 @@ export const getNearbySellers = async (req, res) => {
 export const requestWithdrawal = async (req, res) => {
   try {
     const sellerId = req.user.id;
-    const { amount } = req.body;
+    const { amount, payoutMethod, destinationDetails } = req.body;
 
     if (!amount || amount <= 0) {
-      return handleResponse(res, 400, "Please enter a valid amount");
+      return handleResponse(res, 400, "Please provide a valid withdrawal amount");
     }
 
     // 1. Calculate current available balance
@@ -106,8 +106,7 @@ export const requestWithdrawal = async (req, res) => {
       );
     }
 
-    // 2. Create Withdrawal Transaction
-    // Withdrawals have negative amounts per the model comment
+    // 2. Create Withdrawal Transaction with Payout Destination Details
     const withdrawal = await Transaction.create({
       user: sellerId,
       userModel: "Seller",
@@ -115,6 +114,10 @@ export const requestWithdrawal = async (req, res) => {
       amount: -Math.abs(amount),
       status: "Pending",
       reference: `WDR-${Date.now()}`,
+      metadata: {
+        payoutMethod: payoutMethod || "BANK_TRANSFER",
+        destinationDetails: destinationDetails || (payoutMethod === "UPI" ? "UPI: seller.store@okaxis" : "HDFC Bank **** 4589")
+      }
     });
 
     return handleResponse(

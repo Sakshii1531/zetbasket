@@ -591,7 +591,7 @@ const Orders = () => {
                                                                 onChange={(e) => handleStatusUpdate(order.id, e.target.value)}
                                                                 disabled={['delivered', 'cancelled'].includes(order.status.toLowerCase())}
                                                                 className={cn(
-                                                                    "w-full text-[10px] pl-2.5 pr-8 py-1.5 rounded-full font-black uppercase tracking-widest appearance-none focus:ring-2 focus:ring-offset-1 transition-all border-none outline-none shadow-sm",
+                                                                    "w-full text-[10px] px-3 py-1.5 rounded-full font-black uppercase tracking-widest appearance-none focus:ring-2 focus:ring-offset-1 transition-all border-none outline-none shadow-sm text-center",
                                                                     ['delivered', 'cancelled'].includes(order.status.toLowerCase()) ? "cursor-not-allowed opacity-90" : "cursor-pointer",
                                                                     order.status === 'pending' ? "bg-amber-100 text-amber-700 focus:ring-amber-200" :
                                                                         order.status === 'confirmed' ? "bg-brand-100 text-brand-700 focus:ring-brand-200" :
@@ -609,7 +609,6 @@ const Orders = () => {
                                                                 <option value="delivered" disabled={order.status === 'cancelled'}>Delivered</option>
                                                                 <option value="cancelled" disabled={order.status === 'delivered'}>Cancelled</option>
                                                             </select>
-                                                            <HiOutlineChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none opacity-60" />
                                                         </div>
                                                     </td>
                                                     <td className="px-4 lg:px-6 py-3 lg:py-4 text-right">
@@ -914,7 +913,7 @@ const Orders = () => {
                                                     onChange={(e) => handleStatusUpdate(selectedOrder.id, e.target.value)}
                                                     disabled={['delivered', 'cancelled'].includes(selectedOrder.status.toLowerCase())}
                                                     className={cn(
-                                                        "w-full text-xs pl-3 pr-8 py-2 rounded-xl font-black uppercase tracking-wider border appearance-none focus:ring-2 focus:ring-offset-1 transition-all outline-none shadow-sm",
+                                                        "w-full text-xs px-3 py-2 rounded-xl font-black uppercase tracking-wider border appearance-none focus:ring-2 focus:ring-offset-1 transition-all outline-none shadow-sm text-center",
                                                         ['delivered', 'cancelled'].includes(selectedOrder.status.toLowerCase()) ? "cursor-not-allowed opacity-90" : "cursor-pointer",
                                                         getStatusColor(selectedOrder.status) === 'warning' ? "bg-amber-100 text-amber-700 focus:ring-amber-200" :
                                                             getStatusColor(selectedOrder.status) === 'info' ? "bg-brand-100 text-brand-700 focus:ring-brand-200" :
@@ -932,7 +931,6 @@ const Orders = () => {
                                                     <option value="delivered" disabled={selectedOrder.status.toLowerCase() === 'cancelled'}>Delivered</option>
                                                     <option value="cancelled" disabled={selectedOrder.status.toLowerCase() === 'delivered'}>Cancelled</option>
                                                 </select>
-                                                <HiOutlineChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none opacity-60" />
                                             </div>
                                         </div>
                                     </div>

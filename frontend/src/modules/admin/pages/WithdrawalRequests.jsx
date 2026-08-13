@@ -340,6 +340,13 @@ const WithdrawalRequests = () => {
                                                         <span className="h-1 w-1 rounded-full bg-slate-300" />
                                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{new Date(req.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
                                                     </div>
+                                                    {req.metadata?.destinationDetails && (
+                                                        <div className="mt-1">
+                                                            <span className="text-[9px] font-black text-brand-700 bg-brand-50 px-2 py-0.5 rounded-md border border-brand-200/60">
+                                                                {req.metadata.destinationDetails}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>
@@ -451,6 +458,12 @@ const WithdrawalRequests = () => {
                                 <p className="ds-label mb-2">Request Amount</p>
                                 <h4 className="text-2xl font-black text-slate-900">₹{Math.abs(selectedRequest.amount).toLocaleString()}</h4>
                                 <p className="text-[10px] font-semibold text-slate-400 mt-1">Reference: {selectedRequest.reference}</p>
+                            </Card>
+                            <Card className="p-4 border-none bg-brand-50/60 ring-1 ring-brand-100 rounded-xl">
+                                <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-1">Transfer Destination Details</p>
+                                <p className="text-sm font-black text-slate-900">
+                                    {selectedRequest.metadata?.destinationDetails || (selectedRequest.metadata?.payoutMethod === 'UPI' ? 'UPI Transfer' : 'Bank Transfer')}
+                                </p>
                             </Card>
                         </div>
 

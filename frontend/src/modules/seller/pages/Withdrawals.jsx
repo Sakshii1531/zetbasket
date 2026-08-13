@@ -30,6 +30,8 @@ const Withdrawals = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [amount, setAmount] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [selectedMethod, setSelectedMethod] = useState('bank');
+    const [upiId, setUpiId] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
@@ -101,13 +103,24 @@ const Withdrawals = () => {
             return;
         }
 
+        if (selectedMethod === 'upi' && !upiId.trim()) {
+            toast.error('Please enter your valid UPI ID (e.g. name@upi).');
+            return;
+        }
+
         try {
             setIsSubmitting(true);
-            const response = await sellerApi.requestWithdrawal({ amount: parseFloat(amount) });
+            const destinationDetails = selectedMethod === 'bank' ? 'HDFC Bank **** 4589' : `UPI: ${upiId.trim()}`;
+            const response = await sellerApi.requestWithdrawal({
+                amount: parseFloat(amount),
+                payoutMethod: selectedMethod === 'bank' ? 'BANK_TRANSFER' : 'UPI',
+                destinationDetails
+            });
             if (response.data.success) {
                 toast.success('Withdrawal request submitted successfully!');
                 setIsModalOpen(false);
                 setAmount('');
+                setUpiId('');
                 refreshEarnings();
             }
         } catch (error) {
@@ -121,11 +134,12 @@ const Withdrawals = () => {
         return <div className="flex items-center justify-center h-screen font-black text-slate-600">LOADING WITHDRAWALS...</div>;
     }
 
+    const completedWithdrawals = withdrawalHistory.filter(t => (t.status || '').toString().toLowerCase() === 'settled' || (t.status || '').toString().toLowerCase() === 'completed');
     const balances = {
         available: Number(data.balances?.availableBalance ?? 0),
         onHold: Number(data.balances?.onHoldBalance ?? 0),
         pending: Math.abs(Number(data.balances?.pendingPayouts ?? 0)),
-        lastWithdrawal: Math.abs(withdrawalHistory[0]?.amount ?? 0),
+        lastWithdrawal: Math.abs(completedWithdrawals[0]?.amount ?? 0),
     };
 
     return (
@@ -309,16 +323,40 @@ const Withdrawals = () => {
                         </div>
 
                         <div className="p-4 bg-brand-50/50 rounded-2xl border border-brand-100/50 space-y-3">
-                            <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-1">Transfer Destination</p>
-                            <div className="flex items-center gap-4">
-                                <div className="h-10 w-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                                    <Building2 className="h-5 w-5 text-brand-400" />
+                            <div className="flex justify-between items-center">
+                                <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest">Transfer Destination</p>
+                                <span className="text-[9px] font-bold text-slate-400">Click arrow to toggle method</span>
+                            </div>
+                            <div 
+                                onClick={() => setSelectedMethod(prev => prev === 'bank' ? 'upi' : 'bank')}
+                                className="flex items-center gap-4 cursor-pointer group hover:bg-white/60 p-1.5 rounded-xl transition-all"
+                            >
+                                <div className="h-10 w-10 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                                    {selectedMethod === 'bank' ? <Building2 className="h-5 w-5 text-brand-500" /> : <Wallet className="h-5 w-5 text-purple-500" />}
                                 </div>
                                 <div className="flex-1">
-                                    <p className="text-xs font-black text-slate-900 uppercase">HDFC Bank Limited</p>
-                                    <p className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">Acct Ending in **** 4589</p>
+                                    {selectedMethod === 'bank' ? (
+                                        <>
+                                            <p className="text-xs font-black text-slate-900 uppercase">HDFC Bank Limited</p>
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Acct Ending in **** 4589</p>
+                                        </>
+                                    ) : (
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-black text-slate-900 uppercase">UPI Transfer</p>
+                                            <input
+                                                type="text"
+                                                value={upiId}
+                                                onChange={(e) => setUpiId(e.target.value)}
+                                                onClick={(e) => e.stopPropagation()}
+                                                placeholder="Enter UPI ID (e.g. name@upi)"
+                                                className="w-full px-2 py-1 bg-white ring-1 ring-slate-200 focus:ring-2 focus:ring-purple-500/30 rounded-lg text-xs font-bold outline-none text-slate-900 placeholder:text-slate-400 placeholder:font-medium"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
-                                <ArrowRight className="h-4 w-4 text-slate-300" />
+                                <div className="p-1.5 rounded-lg bg-white shadow-sm group-hover:bg-brand-500 group-hover:text-white transition-all text-slate-400">
+                                    <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                                </div>
                             </div>
                         </div>
                     </div>

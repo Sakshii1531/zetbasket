@@ -61,18 +61,39 @@ const AdminWallet = () => {
             if (summaryRes.data.success || ledgerRes.data.success) {
                 const summary = summaryRes.data.result || {};
                 const ledger = ledgerRes.data.result || {};
-                const mappedTransactions = (ledger.items || []).map((entry) => ({
-                    id: (entry.transactionId || entry.reference || entry._id || '').toString().substring(0, 10).toUpperCase(),
-                    type: entry.type || "UNKNOWN",
-                    amount: entry.direction === "DEBIT" ? -Math.abs(entry.amount || 0) : Math.abs(entry.amount || 0),
-                    status: entry.status || "COMPLETED",
-                    sender: entry.direction === "DEBIT" ? (entry.actorType || "SYSTEM") : "SYSTEM",
-                    recipient: entry.direction === "CREDIT" ? (entry.actorType || "SYSTEM") : "PLATFORM_WALLET",
-                    date: entry.createdAt ? new Date(entry.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "-",
-                    time: entry.createdAt ? new Date(entry.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-",
-                    notes: entry.description || entry.type,
-                    method: entry.paymentMode || "N/A",
-                }));
+                const formatActor = (actor, defaultVal) => {
+                    if (!actor || actor === 'SYSTEM') return 'System Float';
+                    if (actor === 'DELIVERY_PARTNER' || actor === 'RIDER') return 'Delivery Partner';
+                    if (actor === 'SELLER' || actor === 'MERCHANT') return 'Seller';
+                    if (actor === 'CUSTOMER' || actor === 'USER') return 'Customer';
+                    if (actor === 'PLATFORM_WALLET') return 'Platform Admin Wallet';
+                    return actor.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+                };
+
+                const formatType = (typeStr) => {
+                    if (!typeStr) return 'Transaction';
+                    return typeStr.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+                };
+
+                const mappedTransactions = (ledger.items || []).map((entry) => {
+                    const rawRef = (entry.reference || entry.transactionId || entry._id || '').toString();
+                    const cleanRef = rawRef.startsWith('ORD-') ? rawRef : (rawRef.length > 12 ? `REF-${rawRef.slice(-8).toUpperCase()}` : rawRef.toUpperCase());
+
+                    return {
+                        id: cleanRef,
+                        rawType: entry.type || "UNKNOWN",
+                        type: formatType(entry.type),
+                        amount: entry.direction === "DEBIT" ? -Math.abs(entry.amount || 0) : Math.abs(entry.amount || 0),
+                        status: entry.status || "COMPLETED",
+                        sender: entry.direction === "DEBIT" ? formatActor(entry.actorType, "System Float") : "System Float",
+                        recipient: entry.direction === "CREDIT" ? formatActor(entry.actorType, "Platform Admin Wallet") : "Platform Admin Wallet",
+                        date: entry.createdAt ? new Date(entry.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "-",
+                        time: entry.createdAt ? new Date(entry.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-",
+                        notes: entry.description || formatType(entry.type),
+                        method: entry.paymentMode || "N/A",
+                        rawEntry: entry
+                    };
+                });
 
                 setWalletData({
                     stats: {
@@ -322,56 +343,139 @@ const AdminWallet = () => {
                 </div>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {stats.map((stat, idx) => (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: idx * 0.05 }}
-                        key={idx}
-                    >
-                        <Card className="px-5 py-3 border-none shadow-sm ring-1 ring-slate-100 hover:ring-primary/20 transition-all hover:shadow-xl bg-white group relative overflow-hidden">
-                            <div className="flex flex-col h-full relative z-10">
-                                {/* Top Row: Icon and Live Status */}
-                                <div className="flex justify-between items-center mb-2">
-                                    <div className={cn("p-1.5 rounded-xl transition-all duration-500 group-hover:rotate-6", stat.bg)}>
-                                        <stat.icon className={cn("h-4 w-4", stat.iconColor)} strokeWidth={2.5} />
+            {/* Top Stats & Settlements Layout */}
+            <div className="flex flex-col xl:flex-row gap-6 items-start">
+                {/* Stats Grid - 3x2 narrow cards layout */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full xl:max-w-2xl shrink-0">
+                    {stats.map((stat, idx) => (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: idx * 0.05 }}
+                            key={idx}
+                        >
+                            <Card className="p-2.5 px-3.5 border-none shadow-sm ring-1 ring-slate-100 hover:ring-primary/20 transition-all hover:shadow-md bg-white group relative overflow-hidden">
+                                <div className="flex flex-col h-full relative z-10">
+                                    {/* Top Row: Icon and Live Status */}
+                                    <div className="flex justify-between items-center mb-0.5">
+                                        <div className={cn("p-1 rounded-md transition-all duration-500 group-hover:rotate-6", stat.bg)}>
+                                            <stat.icon className={cn("h-4 w-4", stat.iconColor)} strokeWidth={2.5} />
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Live</span>
+                                            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest leading-none">Live</span>
-                                        <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
+
+                                    {/* Middle Row: Label and Value */}
+                                    <div className="my-0.5">
+                                        <p className="text-[10px] font-semibold text-slate-500 capitalize tracking-normal mb-0.5">{stat.label}</p>
+                                        <h3 className="text-base font-bold text-slate-800 leading-tight">{stat.value}</h3>
+                                    </div>
+
+                                    {/* Bottom Row: Description */}
+                                    <div className="pt-1 border-t border-slate-100 mt-1">
+                                        <p className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5">
+                                            <span className="w-0.5 h-2.5 rounded-full bg-slate-300" />
+                                            {stat.description}
+                                        </p>
                                     </div>
                                 </div>
 
-                                {/* Middle Row: Label and Value */}
-                                <div className="mb-2.5">
-                                    <p className="ds-label mb-0.5">{stat.label}</p>
-                                    <h3 className="ds-stat-medium">{stat.value}</h3>
+                                {/* Background ghost icon */}
+                                <div className="absolute -bottom-2 -right-2 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-500 group-hover:scale-110">
+                                    <stat.icon className="h-16 w-16" strokeWidth={1} />
                                 </div>
+                            </Card>
+                        </motion.div>
+                    ))}
+                </div>
 
-                                {/* Bottom Row: Description */}
-                                <div className="pt-2 border-t border-slate-50 mt-auto">
-                                    <p className="text-[10px] font-semibold text-slate-400/80 flex items-center gap-2">
-                                        <span className="w-1 h-3 rounded-full bg-slate-100" />
-                                        {stat.description}
-                                    </p>
+                {/* Settlements & Analytics Overview Column */}
+                <div className="w-full xl:w-[340px] shrink-0 space-y-4">
+                    {/* Settlements Card - Ultra Compact Height */}
+                    <Card className="p-2.5 px-3.5 border-none shadow-xl ring-1 ring-slate-100 bg-gradient-to-br from-slate-900 to-slate-800 text-white overflow-hidden relative rounded-2xl">
+                        <div className="relative z-10 space-y-1.5">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5">
+                                    <PieChart className="h-3 w-3 text-emerald-400" />
+                                    <h2 className="text-[11px] font-black uppercase tracking-wider text-slate-200">Settlements</h2>
+                                </div>
+                                <span className="text-[8px] font-black text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded-full border border-emerald-500/30">Active</span>
+                            </div>
+
+                            <div className="flex items-baseline justify-between py-0.5">
+                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Ready for Settlement</span>
+                                <h3 className="text-lg font-black text-white leading-none">₹{((walletData.stats?.sellerPendingPayouts || 0) + (walletData.stats?.deliveryPendingPayouts || 0)).toLocaleString()}</h3>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-1.5">
+                                <div className="flex justify-between items-center bg-slate-800/60 p-1 px-2 rounded-md border border-white/5 text-xs">
+                                    <div className="flex items-center gap-1">
+                                        <div className="h-1.5 w-1.5 rounded-full bg-brand-400" />
+                                        <span className="font-bold text-slate-300 text-[9px]">Sellers</span>
+                                    </div>
+                                    <span className="font-black text-white text-[10px]">₹{(walletData.stats?.sellerPendingPayouts || 0).toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between items-center bg-slate-800/60 p-1 px-2 rounded-md border border-white/5 text-xs">
+                                    <div className="flex items-center gap-1">
+                                        <div className="h-1.5 w-1.5 rounded-full bg-purple-400" />
+                                        <span className="font-bold text-slate-300 text-[9px]">Riders</span>
+                                    </div>
+                                    <span className="font-black text-white text-[10px]">₹{(walletData.stats?.deliveryPendingPayouts || 0).toLocaleString()}</span>
                                 </div>
                             </div>
 
-                            {/* Background ghost icon */}
-                            <div className="absolute -bottom-3 -right-3 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity duration-500 group-hover:scale-110">
-                                <stat.icon className="h-24 w-24" strokeWidth={1} />
+                            <button
+                                onClick={handleProcessPayouts}
+                                disabled={isProcessing}
+                                className="w-full py-1.5 bg-white hover:bg-slate-100 text-slate-900 rounded-lg font-black text-[9px] uppercase tracking-widest transition-all shadow-md active:scale-[0.98] flex items-center justify-center gap-1 group disabled:opacity-50"
+                            >
+                                {isProcessing ? <RotateCw className="h-3 w-3 animate-spin" /> : <Wallet className="h-3 w-3 group-hover:rotate-12 transition-transform" />}
+                                {isProcessing ? 'SETTLING...' : 'Bulk Settlement'}
+                            </button>
+                        </div>
+                        <div className="absolute -bottom-6 -right-6 opacity-10">
+                            <Wallet className="h-20 w-20" />
+                        </div>
+                    </Card>
+
+                    {/* Analytics Section - Compact Size */}
+                    <div className="space-y-1.5">
+                        <div className="flex items-center gap-1.5">
+                            <div className="p-1 bg-brand-50 text-brand-600 rounded-md">
+                                <BarChart3 className="h-3 w-3" />
                             </div>
-                        </Card>
-                    </motion.div>
-                ))}
+                            <h2 className="text-xs font-black text-slate-800 uppercase tracking-wide">Analytics</h2>
+                        </div>
+                        <div className="space-y-1.5">
+                            {[
+                                { label: 'Platform Revenue Report', icon: TrendingUp, path: '/admin' },
+                                { label: 'Settlement History', icon: History, path: '/admin/delivery-funds' },
+                                { label: 'Tax Statements', icon: DollarSign, path: '#' },
+                            ].map((link, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => link.path !== '#' ? navigate(link.path) : alert('Tax Statements generation is coming soon!')}
+                                    className="w-full p-1.5 px-2.5 bg-white ring-1 ring-slate-100 rounded-lg flex items-center justify-between group hover:ring-primary/20 hover:shadow-sm transition-all"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-1 bg-slate-50 text-slate-400 rounded-md group-hover:bg-primary/10 group-hover:text-primary transition-all">
+                                            <link.icon className="h-3 w-3" />
+                                        </div>
+                                        <span className="text-[11px] font-semibold text-slate-700">{link.label}</span>
+                                    </div>
+                                    <ArrowRight className="h-3 w-3 text-slate-300 group-hover:translate-x-1 transition-transform" />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Transaction History */}
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            {/* Transaction History Section */}
+            <div className="space-y-6 mt-8">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-brand-50 text-brand-600 rounded-lg">
                                 <History className="h-5 w-5" />
@@ -435,7 +539,12 @@ const AdminWallet = () => {
                                                             </div>
                                                             <div>
                                                                 <p className="text-sm font-bold text-slate-900">{req.beneficiary?.shopName || req.beneficiary?.name || req.beneficiaryId}</p>
-                                                                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">{req.beneficiary?.phone || req.payoutType}</p>
+                                                                <div className="flex items-center gap-2 mt-1">
+                                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{req.beneficiary?.phone || req.payoutType}</p>
+                                                                    <span className="text-[9px] font-black text-brand-700 bg-brand-50 px-2 py-0.5 rounded-md border border-brand-200/60 uppercase">
+                                                                        {req.metadata?.destinationDetails || (req.metadata?.payoutMethod === 'UPI' ? 'UPI Transfer' : 'Bank Transfer')}
+                                                                    </span>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </td>
@@ -497,7 +606,7 @@ const AdminWallet = () => {
                                                                 {txn.amount > 0 ? <ArrowDownCircle className="h-5 w-5" /> : <ArrowUpCircle className="h-5 w-5" />}
                                                             </div>
                                                             <div>
-                                                                <p className="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors">{txn.type.replace('_', ' ').toUpperCase()}</p>
+                                                                <p className="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors">{txn.type}</p>
                                                                 <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">{txn.id} • {txn.date}</p>
                                                             </div>
                                                         </div>
@@ -568,86 +677,6 @@ const AdminWallet = () => {
                             </div>
                         )}
                     </Card>
-                </div>
-
-                {/* Side Panels */}
-                <div className="space-y-8">
-                    {/* Settlement Overview */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-brand-50 text-brand-600 rounded-lg">
-                                <PieChart className="h-5 w-5" />
-                            </div>
-                            <h2 className="ds-h2">Settlements</h2>
-                        </div>
-                        <Card className="p-6 border-none shadow-xl ring-1 ring-slate-100 bg-gradient-to-br from-slate-900 to-slate-800 text-white overflow-hidden relative">
-                            <div className="relative z-10 space-y-6">
-                                <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-2">Ready for Settlement</p>
-                                    <h3 className="text-4xl font-black">₹{((walletData.stats?.sellerPendingPayouts || 0) + (walletData.stats?.deliveryPendingPayouts || 0)).toLocaleString()}</h3>
-                                </div>
-                                <div className="space-y-3">
-                                    <div className="flex justify-between items-center bg-slate-800/50 p-3 rounded-2xl border border-white/5">
-                                        <div className="flex items-center gap-2">
-                                            <div className="h-2 w-2 rounded-full bg-brand-400" />
-                                            <span className="text-xs font-bold text-slate-300">Sellers</span>
-                                        </div>
-                                        <span className="text-xs font-black">₹{(walletData.stats?.sellerPendingPayouts || 0).toLocaleString()}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center bg-slate-800/50 p-3 rounded-2xl border border-white/5">
-                                        <div className="flex items-center gap-2">
-                                            <div className="h-2 w-2 rounded-full bg-purple-400" />
-                                            <span className="text-xs font-bold text-slate-300">Riders</span>
-                                        </div>
-                                        <span className="text-xs font-black">₹{(walletData.stats?.deliveryPendingPayouts || 0).toLocaleString()}</span>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={handleProcessPayouts}
-                                    disabled={isProcessing}
-                                    className="w-full py-4 bg-white hover:bg-slate-100 text-slate-900 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2 group disabled:opacity-50"
-                                >
-                                    {isProcessing ? <RotateCw className="h-4 w-4 animate-spin" /> : <Wallet className="h-4 w-4 group-hover:rotate-12 transition-transform" />}
-                                    {isProcessing ? 'SETTLING...' : 'Bulk Settlement'}
-                                </button>
-                            </div>
-                            <div className="absolute -bottom-8 -right-8 opacity-10">
-                                <Wallet className="h-40 w-40" />
-                            </div>
-                        </Card>
-                    </div>
-
-                    {/* Quick Links */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-brand-50 text-brand-600 rounded-lg">
-                                <BarChart3 className="h-5 w-5" />
-                            </div>
-                            <h2 className="text-xl font-black text-slate-900">Analytics</h2>
-                        </div>
-                        <div className="space-y-3">
-                            {[
-                                { label: 'Platform Revenue Report', icon: TrendingUp, path: '/admin' },
-                                { label: 'Settlement History', icon: History, path: '/admin/delivery-funds' },
-                                { label: 'Tax Statements', icon: DollarSign, path: '#' },
-                            ].map((link, i) => (
-                                <button
-                                    key={i}
-                                    onClick={() => link.path !== '#' ? navigate(link.path) : alert('Tax Statements generation is coming soon!')}
-                                    className="w-full p-4 bg-white ring-1 ring-slate-100 rounded-[24px] flex items-center justify-between group hover:ring-primary/20 hover:shadow-lg transition-all"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-primary/10 group-hover:text-primary transition-all">
-                                            <link.icon className="h-4 w-4" />
-                                        </div>
-                                        <span className="text-xs font-black text-slate-700">{link.label}</span>
-                                    </div>
-                                    <ArrowRight className="h-4 w-4 text-slate-300 group-hover:translate-x-1 transition-transform" />
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
             </div>
 
             {/* Transaction Detail Modal */}
@@ -673,11 +702,11 @@ const AdminWallet = () => {
                         <div className="grid grid-cols-2 gap-6">
                             <div className="space-y-1">
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</p>
-                                <p className="text-sm font-bold text-slate-900">{selectedTransaction.type.replace('_', ' ').toUpperCase()}</p>
+                                <p className="text-sm font-bold text-slate-900">{selectedTransaction.type}</p>
                             </div>
                             <div className="space-y-1">
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date & Time</p>
-                                <p className="text-sm font-bold text-slate-900">{selectedTransaction.date}</p>
+                                <p className="text-sm font-bold text-slate-900">{selectedTransaction.date} {selectedTransaction.time && `• ${selectedTransaction.time}`}</p>
                             </div>
                             <div className="space-y-1">
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">From</p>
@@ -696,7 +725,7 @@ const AdminWallet = () => {
                                 <p className="text-sm font-bold text-slate-700">{selectedTransaction.method}</p>
                             </div>
                             <div className="col-span-2 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Notes</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Notes / Breakdown</p>
                                 <p className="text-xs font-medium text-slate-600 italic">"{selectedTransaction.notes}"</p>
                             </div>
                         </div>

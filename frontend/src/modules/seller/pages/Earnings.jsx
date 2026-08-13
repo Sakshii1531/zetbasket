@@ -40,8 +40,8 @@ const Earnings = () => {
 
   React.useEffect(() => {
     if (data?.balances != null && withdrawAmount === "") {
-      const settled = Number(data.balances?.settledBalance ?? 0);
-      setWithdrawAmount(settled > 0 ? String(settled) : "");
+      const avail = Number(data.balances?.availableBalance ?? data.balances?.settledBalance ?? 0);
+      setWithdrawAmount(avail > 0 ? String(avail) : "");
     }
   }, [data?.balances]);
 
@@ -166,7 +166,7 @@ const Earnings = () => {
                     Available to Withdraw
                   </p>
                   <p className="text-xs font-black text-slate-900">
-                    ₹{Number(data?.balances?.settledBalance ?? 0).toLocaleString()}
+                    ₹{Number(data?.balances?.availableBalance ?? data?.balances?.settledBalance ?? 0).toLocaleString()}
                   </p>
                 </div>
               </div>

@@ -44,7 +44,8 @@ export const getSellerEarnings = async (req, res) => {
         // Fetch wallet for live pending balance (money on hold due to return window)
         const wallet = await Wallet.findOne({ ownerType: 'SELLER', ownerId: sellerId });
         const onHoldBalance = wallet ? wallet.pendingBalance : 0;
-        const liveAvailableBalance = wallet ? wallet.availableBalance : settledBalance;
+        const rawBaseBalance = wallet ? wallet.availableBalance : settledBalance;
+        const liveAvailableBalance = Math.max(0, rawBaseBalance - pendingPayouts - onHoldBalance);
 
         // Keep "Total Revenue" aligned with Dashboard definition:
         // sum of non-cancelled seller orders from Order collection.
