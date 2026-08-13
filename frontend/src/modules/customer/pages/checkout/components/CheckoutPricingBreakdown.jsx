@@ -29,10 +29,10 @@ const CheckoutPricingBreakdown = React.memo(function CheckoutPricingBreakdown({
   selectedCoupon,
   discountAmount,
 }) {
-  const deliveryFee = pricingPreview?.deliveryFeeCharged || 0;
-  const handlingFee = pricingPreview?.handlingFeeCharged || 0;
-  const tipAmount = pricingPreview?.tipTotal || selectedTip || 0;
-  const taxAmount = pricingPreview?.taxTotal || 0;
+  const deliveryFee = Math.ceil(pricingPreview?.deliveryFeeCharged || 0);
+  const handlingFee = Math.ceil(pricingPreview?.handlingFeeCharged || 0);
+  const tipAmount = Math.ceil(pricingPreview?.tipTotal || selectedTip || 0);
+  const taxAmount = Math.ceil(pricingPreview?.taxTotal || 0);
 
   return (
     <>

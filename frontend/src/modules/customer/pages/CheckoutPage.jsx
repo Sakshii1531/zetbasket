@@ -294,7 +294,11 @@ const CheckoutPage = () => {
       };
     }
 
-    const addrLoc = currentAddress?.location;
+    const addrLoc = currentAddress?.location || (
+      currentLocation?.latitude && currentLocation?.longitude
+        ? { lat: currentLocation.latitude, lng: currentLocation.longitude }
+        : null
+    );
     const hasAddrLoc =
       addrLoc &&
       typeof addrLoc.lat === "number" &&
@@ -953,7 +957,7 @@ const CheckoutPage = () => {
       <CheckoutOrderSuccess orderId={orderId} show={showSuccess} />
 
       {/* Premium Header */}
-      <div className="bg-gradient-to-br from-[var(--brand-700)] via-[var(--brand-600)] to-[var(--brand-400)] pt-6 pb-12 md:pb-24 relative z-10 shadow-lg md:rounded-b-[4rem] rounded-b-[2rem] overflow-hidden">
+      <div className="bg-gradient-to-br from-[var(--brand-700)] via-[var(--brand-600)] to-[var(--brand-400)] pt-6 pb-8 md:pb-16 relative z-10 shadow-lg md:rounded-b-[4rem] rounded-b-[2rem] overflow-hidden">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/5 rounded-full blur-[100px] -mr-32 -mt-64 pointer-events-none" />
         <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-brand-400/10 rounded-full blur-[80px] pointer-events-none" />
         <div className="max-w-7xl mx-auto px-4 md:px-8 relative z-10">
@@ -982,7 +986,7 @@ const CheckoutPage = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-8 -mt-12 md:-mt-16 lg:-mt-20 relative z-20">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 -mt-6 md:-mt-10 lg:-mt-14 relative z-20">
         <div className="lg:grid lg:grid-cols-12 lg:gap-8 items-start">
 
           {/* Left Column */}

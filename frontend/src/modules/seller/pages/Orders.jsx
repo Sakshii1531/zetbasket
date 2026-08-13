@@ -120,7 +120,7 @@ const Orders = () => {
                     qty: item.quantity,
                     image: item.image
                 })),
-                total: order.pricing?.total || 0,
+                total: Math.ceil(order.pricing?.total || 0),
                 status: getLegacyStatusFromOrder(order),
                 workflowStatus: order.workflowStatus,
                 workflowVersion: order.workflowVersion,
@@ -842,16 +842,16 @@ const Orders = () => {
                                                     <div className="space-y-2">
                                                         <div className="flex justify-between text-xs">
                                                             <span className="font-bold text-slate-600">Subtotal</span>
-                                                            <span className="font-black text-slate-900">₹{(selectedOrder.total - 10).toFixed(2)}</span>
+                                                            <span className="font-black text-slate-900">₹{Math.ceil(selectedOrder.items.reduce((s, i) => s + i.price * i.qty, 0))}</span>
                                                         </div>
                                                         <div className="flex justify-between text-xs">
                                                             <span className="font-bold text-slate-600">Delivery Fee</span>
-                                                            <span className="font-black text-brand-600">₹10.00</span>
+                                                            <span className="font-black text-brand-600">₹{Math.ceil(selectedOrder.total - selectedOrder.items.reduce((s, i) => s + i.price * i.qty, 0))}</span>
                                                         </div>
                                                         <div className="h-px bg-primary/10 my-2" />
                                                         <div className="flex justify-between text-sm">
                                                             <span className="font-black text-slate-900">Total</span>
-                                                            <span className="font-black text-primary">₹{selectedOrder.total.toFixed(2)}</span>
+                                                            <span className="font-black text-primary">₹{selectedOrder.total}</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -875,11 +875,11 @@ const Orders = () => {
                                                         </div>
                                                         <div>
                                                             <p className="text-xs font-bold text-slate-900">{item.name}</p>
-                                                            <p className="text-xs font-semibold text-slate-600 mt-0.5">₹{item.price.toFixed(2)} × {item.qty}</p>
+                                                            <p className="text-xs font-semibold text-slate-600 mt-0.5">₹{Math.ceil(item.price)} × {item.qty}</p>
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="text-xs font-black text-slate-900">₹{(item.price * item.qty).toFixed(2)}</p>
+                                                        <p className="text-xs font-black text-slate-900">₹{Math.ceil(item.price * item.qty)}</p>
                                                     </div>
                                                 </div>
                                             ))}

@@ -23,6 +23,7 @@ const BillingCharges = () => {
     const [config, setConfig] = useState({
         platformFee: 0,
         freeDeliveryThreshold: 0,
+        globalTaxRate: 0,
         baseCharge: 30,
         riderBasePayout: 30,
         baseDistance: 0.5,
@@ -58,6 +59,7 @@ const BillingCharges = () => {
                         deliveryPartnerRatePerKm: s.deliveryPartnerRatePerKm ?? s.fleetCommissionRatePerKm ?? prev.deliveryPartnerRatePerKm,
                         fixedCharge: s.fixedDeliveryFee ?? s.customerBaseDeliveryFee ?? prev.fixedCharge,
                         handlingFeeStrategy: s.handlingFeeStrategy ?? prev.handlingFeeStrategy,
+                        globalTaxRate: s.globalTaxRate ?? prev.globalTaxRate,
                         codEnabled: s.codEnabled ?? prev.codEnabled,
                         onlineEnabled: s.onlineEnabled ?? prev.onlineEnabled,
                     }));
@@ -85,6 +87,7 @@ const BillingCharges = () => {
                     fleetCommissionRatePerKm: config.extraPerKm,
                     fixedDeliveryFee: config.fixedCharge,
                     handlingFeeStrategy: config.handlingFeeStrategy,
+                    globalTaxRate: config.globalTaxRate,
                     codEnabled: config.codEnabled,
                     onlineEnabled: config.onlineEnabled,
                 }),
@@ -156,23 +159,6 @@ const BillingCharges = () => {
                         <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-3">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                    Platform/Handling Fee (₹)
-                                    <Info className="h-3 w-3 opacity-50" />
-                                </label>
-                                <div className="relative group">
-                                    <span className="absolute left-5 top-1/2 -translate-y-1/2 font-bold text-slate-300 group-focus-within:text-red-500 transition-colors pointer-events-none">₹</span>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={config.platformFee}
-                                        onChange={(e) => handleInputChange('platformFee', e.target.value)}
-                                        className="w-full pl-10 pr-5 py-4 bg-slate-50 border-none rounded-2xl text-base font-black text-slate-900 outline-none focus:ring-2 focus:ring-red-500/10 transition-all"
-                                    />
-                                </div>
-                                <p className="text-[10px] font-bold text-slate-400 italic">Fee added to every order.</p>
-                            </div>
-                            <div className="space-y-3">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                     Free Delivery Minimum (₹)
                                     <Zap className="h-3 w-3 text-amber-500" />
                                 </label>
@@ -181,12 +167,33 @@ const BillingCharges = () => {
                                     <input
                                         type="number"
                                         min="0"
-                                        value={config.freeDeliveryThreshold}
+                                        value={config.freeDeliveryThreshold === 0 ? '' : config.freeDeliveryThreshold}
                                         onChange={(e) => handleInputChange('freeDeliveryThreshold', e.target.value)}
                                         className="w-full pl-10 pr-5 py-4 bg-slate-50 border-none rounded-2xl text-base font-black text-slate-900 outline-none focus:ring-2 focus:ring-red-500/10 transition-all"
+                                        placeholder="0"
                                     />
                                 </div>
                                 <p className="text-[10px] font-bold text-slate-400 italic">Orders above this amount will have free delivery.</p>
+                            </div>
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    Global Tax / GST Rate (%)
+                                    <Info className="h-3 w-3 opacity-50" />
+                                </label>
+                                <div className="relative group">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.1"
+                                        value={config.globalTaxRate === 0 ? '' : config.globalTaxRate}
+                                        onChange={(e) => handleInputChange('globalTaxRate', e.target.value)}
+                                        className="w-full pl-5 pr-10 py-4 bg-slate-50 border-none rounded-2xl text-base font-black text-slate-900 outline-none focus:ring-2 focus:ring-red-500/10 transition-all"
+                                        placeholder="0"
+                                    />
+                                    <span className="absolute right-5 top-1/2 -translate-y-1/2 font-bold text-slate-400 pointer-events-none">%</span>
+                                </div>
+                                <p className="text-[10px] font-bold text-slate-400 italic">Tax percentage applied on cart subtotal at checkout.</p>
                             </div>
                         </div>
                     </Card>
@@ -226,9 +233,10 @@ const BillingCharges = () => {
                                             <input
                                                 type="number"
                                                 min="0"
-                                                value={config.baseCharge}
+                                                value={config.baseCharge === 0 ? '' : config.baseCharge}
                                                 onChange={(e) => handleInputChange('baseCharge', e.target.value)}
                                                 className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-black text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all"
+                                                placeholder="0"
                                             />
                                             <p className="text-[10px] font-bold text-slate-400 italic">Customer-facing minimum fee for first X kms.</p>
                                         </div>
@@ -239,9 +247,10 @@ const BillingCharges = () => {
                                                     type="number"
                                                     min="0"
                                                     step="0.1"
-                                                    value={config.baseDistance}
+                                                    value={config.baseDistance === 0 ? '' : config.baseDistance}
                                                     onChange={(e) => handleInputChange('baseDistance', e.target.value)}
                                                     className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-black text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all"
+                                                    placeholder="0"
                                                 />
                                                 <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300 uppercase pointer-events-none">km</span>
                                             </div>
@@ -252,9 +261,10 @@ const BillingCharges = () => {
                                             <input
                                                 type="number"
                                                 min="0"
-                                                value={config.extraPerKm}
+                                                value={config.extraPerKm === 0 ? '' : config.extraPerKm}
                                                 onChange={(e) => handleInputChange('extraPerKm', e.target.value)}
                                                 className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-black text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all"
+                                                placeholder="0"
                                             />
                                             <p className="text-[10px] font-bold text-slate-400 italic">Charged for every km beyond base radius.</p>
                                         </div>
@@ -269,9 +279,10 @@ const BillingCharges = () => {
                                             <input
                                                 type="number"
                                                 min="0"
-                                                value={config.fixedCharge}
+                                                value={config.fixedCharge === 0 ? '' : config.fixedCharge}
                                                 onChange={(e) => handleInputChange('fixedCharge', e.target.value)}
                                                 className="w-full pl-10 pr-5 py-4 bg-white ring-1 ring-slate-200 border-none rounded-xl text-base font-medium text-slate-900 outline-none focus:ring-2 focus:ring-slate-900/10 transition-all"
+                                                placeholder="0"
                                             />
                                         </div>
                                         <p className="text-sm font-medium text-slate-400">Flat fee charged for all deliveries below threshold.</p>

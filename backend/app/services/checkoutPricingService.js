@@ -13,6 +13,7 @@ import {
   hydrateOrderItems,
 } from "./finance/pricingService.js";
 import { computeOrderDiscount } from "./finance/couponService.js";
+import { getOrCreateFinanceSettings } from "./finance/financeSettingsService.js";
 
 function normalizeLocation(location = null) {
   const lat = Number(location?.lat);
@@ -444,6 +445,10 @@ export async function buildCheckoutPricingSnapshot({
 
   const globalHandling = await computeGlobalHandlingFeeForCheckout(hydratedItems, { session });
 
+  // Fetch global finance settings once (used for tax and delivery fee calculation)
+  const effectiveSettings = await getOrCreateFinanceSettings({ session });
+  const globalTaxRate = Number(effectiveSettings?.globalTaxRate || 0);
+
   // Pre-compute each seller's subtotal for proportional discount/wallet distribution
   const sellerSubtotals = new Map();
   let totalSubtotal = 0;
@@ -468,12 +473,16 @@ export async function buildCheckoutPricingSnapshot({
     // `applyWalletAllocationToSellerBreakdowns` so it can clamp against
     // the post-tip grandTotal — matching the customer-facing clamp on the
     // frontend. We deliberately do NOT pass walletAmount through here.
+    const sellerSubtotalAmount = sellerSubtotals.get(sellerId) || 0;
+    const sellerTax = round2((sellerSubtotalAmount * globalTaxRate) / 100);
+
     const breakdown = await generateOrderPaymentBreakdown({
       preHydratedItems: sellerItems,
       distanceKm,
       distanceSource,
       discountTotal: sellerDiscount,
-      taxTotal: 0,
+      taxTotal: sellerTax,
+      deliverySettings: effectiveSettings,
       session,
     });
     sellerBreakdownEntries.push({

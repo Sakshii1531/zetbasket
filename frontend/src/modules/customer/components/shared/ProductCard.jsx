@@ -247,13 +247,13 @@ const ProductCard = React.memo(
 
           <div
             className={cn(
-              "block w-full overflow-hidden flex items-center justify-center transition-transform duration-500 group-hover:scale-105 aspect-square",
+              "block w-full overflow-hidden flex items-center justify-center aspect-square",
               compact || neutralBg ? "bg-white/70" : "bg-white/50"
             )}>
             <img
               ref={imageRef}
-              src={applyCloudinaryTransform(product.image)}
-              alt={product.name}
+              src={applyCloudinaryTransform(product?.image || product?.mainImage || (Array.isArray(product?.images) ? product?.images[0] : null))}
+              alt={product?.name || "Product"}
               loading="lazy"
               className="w-full h-full object-cover mix-blend-multiply"
             />

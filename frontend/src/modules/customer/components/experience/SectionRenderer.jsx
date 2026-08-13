@@ -135,7 +135,7 @@ const SectionRenderer = ({ sections = [], productsById = {}, categoriesById = {}
                           <img
                             src={cat.image}
                             alt={cat.name}
-                            className="w-full h-full object-contain object-center mix-blend-multiply transition-transform duration-200 group-hover:scale-105"
+                            className="w-full h-full object-contain object-center mix-blend-multiply"
                           />
                         ) : (
                           <div className="h-6 w-6 rounded-full bg-slate-100" />
@@ -217,7 +217,7 @@ const SectionRenderer = ({ sections = [], productsById = {}, categoriesById = {}
                           <img
                             src={cat.image}
                             alt={cat.name}
-                            className="w-full h-full object-contain object-center mix-blend-multiply transition-transform duration-200 group-hover:scale-105"
+                            className="w-full h-full object-contain object-center mix-blend-multiply"
                           />
                         ) : (
                           <div className="h-6 w-6 rounded-full bg-slate-100" />

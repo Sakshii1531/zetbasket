@@ -81,7 +81,7 @@ const DeliveryAuth = () => {
 
   // OTP state
   const [otp, setOtp] = useState(["1", "2", "3", "4"]);
-  const [agreed, setAgreed] = useState(false);
+  const [agreed, setAgreed] = useState(true);
   const [loading, setLoading] = useState(false);
   const [timer, setTimer] = useState(30);
 
@@ -234,10 +234,6 @@ const DeliveryAuth = () => {
 
   const handleSendOtp = async () => {
     try {
-      if (!agreed) {
-        toast.error("Please tick the checkbox to agree to the Terms & Privacy Policy");
-        return;
-      }
       if (mode === "login") {
         if (!loginPhone || !/^[6-9]\d{9}$/.test(loginPhone)) {
           toast.error("Please enter a valid 10-digit Indian phone number starting with 6, 7, 8, or 9");
@@ -323,10 +319,6 @@ const DeliveryAuth = () => {
   const handleVerifyOtp = async () => {
     if (otp.some((d) => !d || d.trim() === "")) {
       toast.error("Please enter the complete 4-digit OTP code");
-      return;
-    }
-    if (!agreed) {
-      toast.error("Please accept the terms and conditions to proceed");
       return;
     }
     setLoading(true);
@@ -681,10 +673,6 @@ const DeliveryAuth = () => {
                                 toast.error("Please enter your preferred delivery area (minimum 3 characters)");
                                 return;
                               }
-                              if (!agreed) {
-                                toast.error("Please tick the checkbox to agree to the Terms & Privacy Policy");
-                                return;
-                              }
                               setSignupStep(2);
                             }}
                             className="w-full py-4 bg-black text-white rounded-2xl text-sm font-black tracking-widest uppercase shadow-lg shadow-brand-200 hover:bg-brand-700 transition-all flex items-center justify-center gap-2"
@@ -1015,22 +1003,6 @@ const DeliveryAuth = () => {
                         </motion.div>
                       )}
 
-                      <div className="pt-2 flex items-center justify-center">
-                        <label className="flex items-center gap-2.5 cursor-pointer group">
-                          <input
-                            type="checkbox"
-                            checked={agreed}
-                            onChange={(e) => setAgreed(e.target.checked)}
-                            className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black accent-black cursor-pointer shrink-0"
-                          />
-                          <span className="text-xs text-gray-500 font-semibold select-none group-hover:text-gray-700">
-                            I agree to the{" "}
-                            <Link to="/terms" className="text-brand-600 font-bold hover:underline" onClick={(e) => e.stopPropagation()}>Terms</Link>{" "}
-                            &amp;{" "}
-                            <Link to="/privacy" className="text-brand-600 font-bold hover:underline" onClick={(e) => e.stopPropagation()}>Privacy Policy</Link>
-                          </span>
-                        </label>
-                      </div>
                     </div>
                   )}
 
@@ -1059,23 +1031,6 @@ const DeliveryAuth = () => {
                             placeholder="00000 00000"
                           />
                         </div>
-                      </div>
-
-                      <div className="pt-1 flex items-center justify-center">
-                        <label className="flex items-center gap-2.5 cursor-pointer group">
-                          <input
-                            type="checkbox"
-                            checked={agreed}
-                            onChange={(e) => setAgreed(e.target.checked)}
-                            className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black accent-black cursor-pointer shrink-0"
-                          />
-                          <span className="text-xs text-gray-500 font-semibold select-none group-hover:text-gray-700">
-                            I agree to the{" "}
-                            <Link to="/terms" className="text-brand-600 font-bold hover:underline" onClick={(e) => e.stopPropagation()}>Terms</Link>{" "}
-                            &amp;{" "}
-                            <Link to="/privacy" className="text-brand-600 font-bold hover:underline" onClick={(e) => e.stopPropagation()}>Privacy Policy</Link>
-                          </span>
-                        </label>
                       </div>
 
                       <button
@@ -1141,26 +1096,10 @@ const DeliveryAuth = () => {
                     )}
                   </div>
 
-                  {/* Terms checkbox */}
-                  <div className="flex items-start gap-3 bg-gray-50 rounded-2xl p-4 border border-gray-100">
-                    <input
-                      id="terms"
-                      type="checkbox"
-                      checked={agreed}
-                      onChange={(e) => setAgreed(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 accent-brand-600 cursor-pointer"
-                    />
-                    <label htmlFor="terms" className="text-xs text-gray-500 leading-relaxed cursor-pointer">
-                      I confirm my phone number is correct and I agree to the{" "}
-                      <Link to="/terms" onClick={(e) => e.stopPropagation()} className="text-brand-600 font-bold hover:underline relative z-10">Terms of Service</Link> &amp;{" "}
-                      <Link to="/privacy" onClick={(e) => e.stopPropagation()} className="text-brand-600 font-bold hover:underline relative z-10">Privacy Policy</Link>.
-                    </label>
-                  </div>
-
                   {/* Verify Button */}
                   <button
                     onClick={handleVerifyOtp}
-                    disabled={!agreed || otp.some((d) => !d) || loading}
+                    disabled={otp.some((d) => !d) || loading}
                     className="w-full py-4 bg-black text-white rounded-2xl text-sm font-black tracking-widest uppercase shadow-lg shadow-brand-200 hover:bg-brand-700 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {loading ? (
