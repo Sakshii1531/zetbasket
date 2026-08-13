@@ -72,6 +72,21 @@ export function emitToSeller(sellerId, { event, payload }) {
   s.to(`seller:${sellerId}`).emit(event, payload);
 }
 
+/**
+ * Emit `order:new` to the seller's room so their browser panel can
+ * immediately ring the order-alert ringtone without waiting for polling.
+ * The frontend DashboardLayout listens on this exact event via onSellerOrderNew().
+ */
+export function emitNewOrderToSeller(sellerId, payload = {}) {
+  const s = getIo();
+  const sid = normalizeSellerId(sellerId);
+  if (!s || !sid) return;
+  s.to(`seller:${sid}`).emit("order:new", {
+    ...payload,
+    at: new Date().toISOString(),
+  });
+}
+
 export function emitToDelivery(deliveryId, { event, payload }) {
   const s = getIo();
   const id = normalizeDeliveryId(deliveryId);

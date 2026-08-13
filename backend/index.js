@@ -459,7 +459,7 @@ async function main() {
       }
     }
 
-    if (isComponentEnabled('scheduler')) {
+    if (isComponentEnabled('scheduler') || isComponentEnabled('http')) {
       await startScheduler();
 
       // Start health check server for scheduler role

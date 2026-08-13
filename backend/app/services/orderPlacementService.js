@@ -44,6 +44,7 @@ import {
 } from "./idempotencyService.js";
 import { buildCheckoutPricingSnapshot } from "./checkoutPricingService.js";
 import { emitNotificationEvent } from "../modules/notifications/notification.emitter.js";
+import { emitNewOrderToSeller } from "./orderSocketEmitter.js";
 import { NOTIFICATION_EVENTS } from "../modules/notifications/notification.constants.js";
 import * as logger from "./logger.js";
 
@@ -752,6 +753,13 @@ export async function placeOrderAtomic({
           sellerId: order.seller,
           customerId,
         });
+        // Immediately wake up the seller's open browser panel so the
+        // order-alert ringtone fires without waiting for the 15 s poll.
+        emitNewOrderToSeller(order.seller, {
+          orderId: order.orderId,
+          workflowStatus: "SELLER_PENDING",
+          sellerPendingExpiresAt: order.sellerPendingExpiresAt || order.expiresAt,
+        });
       }
     }
 
@@ -763,7 +771,9 @@ export async function placeOrderAtomic({
 
     return { ...resultPayload, duplicate: false };
   } catch (error) {
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
 
     if (idempotencyKey) {
       if (isRetryableError(error)) {

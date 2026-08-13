@@ -570,7 +570,13 @@ const OrderDetailPage = () => {
       return false;
     }
 
-    return true;
+    // Check if at least one item in the order is returnable
+    const hasReturnableItem = Array.isArray(order.items) && order.items.some(item => {
+      const isReturnable = item.returnEligible ?? item.returnPolicy?.isReturnable;
+      return isReturnable;
+    });
+
+    return hasReturnableItem;
   };
 
   const toggleItemSelection = (index) => {
@@ -1038,23 +1044,39 @@ const OrderDetailPage = () => {
           <div className="space-y-2.5 text-sm">
             <div className="flex justify-between text-slate-600">
               <span>Item Total</span>
-              <span className="font-semibold">₹{order.pricing.subtotal}</span>
+              <span className="font-semibold">₹{Math.ceil(order.pricing?.subtotal || 0)}</span>
             </div>
             <div className="flex justify-between text-slate-600">
               <span>Delivery Fee</span>
               <span
                 className={
-                  order.pricing.deliveryFee === 0 ? "text-brand-600 font-bold" : "font-semibold"
+                  order.pricing?.deliveryFee === 0 ? "text-brand-600 font-bold" : "font-semibold"
                 }>
-                {order.pricing.deliveryFee === 0
+                {order.pricing?.deliveryFee === 0
                   ? "FREE"
-                  : `₹${order.pricing.deliveryFee}`}
+                  : `₹${Math.ceil(order.pricing?.deliveryFee || 0)}`}
               </span>
             </div>
-            {order.pricing.tip > 0 && (
+            {(order.paymentBreakdown?.handlingFeeCharged > 0 || order.pricing?.platformFee > 0) && (
+              <div className="flex justify-between text-slate-600">
+                <span>Handling Fee</span>
+                <span className="font-semibold">
+                  ₹{Math.ceil(order.paymentBreakdown?.handlingFeeCharged || order.pricing?.platformFee || 0)}
+                </span>
+              </div>
+            )}
+            {(order.paymentBreakdown?.taxTotal > 0 || order.pricing?.gst > 0) && (
+              <div className="flex justify-between text-slate-600">
+                <span>Tax / GST</span>
+                <span className="font-semibold">
+                  ₹{Math.ceil(order.paymentBreakdown?.taxTotal || order.pricing?.gst || 0)}
+                </span>
+              </div>
+            )}
+            {order.pricing?.tip > 0 && (
               <div className="flex justify-between text-slate-600">
                 <span>Tip</span>
-                <span className="font-semibold">₹{order.pricing.tip}</span>
+                <span className="font-semibold">₹{Math.ceil(order.pricing?.tip || 0)}</span>
               </div>
             )}
             <div className="border-t border-slate-100 mt-3 pt-3 flex justify-between items-center">
@@ -1062,7 +1084,7 @@ const OrderDetailPage = () => {
                 Total Amount
               </span>
               <span className="text-xl font-black text-brand-600">
-                ₹{order.pricing.total}
+                ₹{Math.ceil(order.pricing?.total || 0)}
               </span>
             </div>
           </div>

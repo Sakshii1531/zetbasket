@@ -83,6 +83,7 @@ export function buildSellerOrdersQuery({
   const base = role === "admin" ? {} : { seller: userId };
   const withStatus = {
     ...base,
+    workflowStatus: { $ne: WORKFLOW_STATUS.CREATED },
     ...normalizeSellerStatusFilter(statusParam),
   };
   return appendDateRange(withStatus, { startDate, endDate });

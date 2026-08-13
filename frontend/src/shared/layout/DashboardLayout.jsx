@@ -176,11 +176,7 @@ const DashboardLayout = ({ children, navItems, title }) => {
                 const pendingOrders = allOrders.filter(isSellerAlertEligible);
 
                 if (isFirstLoadRef.current) {
-                    const existingIds = new Set(pendingOrders.map((o) => o.orderId).filter(Boolean));
-                    shownOrderIdsRef.current = existingIds;
                     isFirstLoadRef.current = false;
-                    setShownOrderIds(existingIds);
-                    return;
                 }
 
                 const newOrder = pendingOrders.find((o) => !shownOrderIdsRef.current.has(o.orderId));
@@ -253,8 +249,9 @@ const DashboardLayout = ({ children, navItems, title }) => {
         if (role !== 'seller') return undefined;
         const getToken = createSocketTokenReader(STORAGE_KEYS.AUTH_SELLER);
         getOrderSocket(getToken);
-        const unsubscribeSellerNew = onSellerOrderNew(getToken, () => {
+        const unsubscribeSellerNew = onSellerOrderNew(getToken, (payload) => {
             if (fetchOrdersRef.current) fetchOrdersRef.current();
+            startOrderRingtone();
         });
 
         const unsubscribeDrop = onReturnDropOtp(getToken, (payload) => {
