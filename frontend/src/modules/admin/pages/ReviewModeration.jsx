@@ -9,198 +9,261 @@ import {
     HiOutlineShieldCheck,
     HiOutlineExclamationTriangle,
     HiOutlineChatBubbleBottomCenterText,
-    HiOutlineHandThumbUp,
     HiOutlineMagnifyingGlass,
-    HiOutlineBuildingStorefront
+    HiOutlineBuildingStorefront,
+    HiOutlineEyeSlash,
+    HiOutlineArrowPath
 } from 'react-icons/hi2';
 import { useToast } from '@shared/components/ui/Toast';
 import Modal from '@shared/components/ui/Modal';
 import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ShieldCheck } from 'lucide-react';
 
 const ReviewModeration = () => {
     const { showToast } = useToast();
-    const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
-    const [selectedReview, setSelectedReview] = useState(null);
-    const [replyText, setReplyText] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(true);
     const [reviews, setReviews] = useState([]);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(25);
     const [total, setTotal] = useState(0);
 
+    const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+    const [selectedReview, setSelectedReview] = useState(null);
+    const [targetStatus, setTargetStatus] = useState('');
+    const [moderationReason, setModerationReason] = useState('');
+    const [actionLoading, setActionLoading] = useState(false);
+
     useEffect(() => {
         fetchReviews(1);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pageSize]);
+    }, [pageSize, statusFilter]);
 
     const fetchReviews = async (requestedPage = 1) => {
         try {
             setLoading(true);
-            const res = await adminApi.getPendingReviews({ page: requestedPage, limit: pageSize });
+            const params = { page: requestedPage, limit: pageSize };
+            if (statusFilter) params.status = statusFilter;
+            if (searchQuery.trim()) params.search = searchQuery.trim();
+
+            const res = await adminApi.getAdminProductRatings(params);
             if (res.data.success) {
                 const payload = res.data.result || {};
-                const data = Array.isArray(payload.items) ? payload.items : (res.data.results || []);
-                setReviews(data.map(r => ({
-                    ...r,
-                    id: r._id,
-                    user: r.userId?.name || "Anonymous",
-                    item: r.productId?.name || "Deleted Product",
-                    itemImage: r.productId?.images?.[0],
-                    date: new Date(r.createdAt).toLocaleString(),
-                    tags: [] // Tags can be empty or logic-based
-                })));
+                const data = Array.isArray(payload.items) ? payload.items : [];
+                setReviews(data);
                 setTotal(typeof payload.total === 'number' ? payload.total : data.length);
                 setPage(typeof payload.page === 'number' ? payload.page : requestedPage);
             }
         } catch (error) {
             console.error("Fetch Reviews Error:", error);
-            showToast("Failed to load reviews", "error");
+            showToast("Failed to load product ratings", "error");
         } finally {
             setLoading(false);
         }
     };
 
-    const handleApprove = async (id) => {
-        try {
-            const res = await adminApi.updateReviewStatus(id, 'approved');
-            if (res.data.success) {
-                setReviews(reviews.filter(r => r.id !== id));
-                fetchReviews(page);
-                showToast('Review approved and published', 'success');
-            }
-        } catch (error) {
-            showToast("Failed to approve review", "error");
-        }
-    };
-
-    const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to reject and remove this review?')) return;
-        try {
-            const res = await adminApi.updateReviewStatus(id, 'rejected');
-            if (res.data.success) {
-                setReviews(reviews.filter(r => r.id !== id));
-                fetchReviews(page);
-                showToast('Review rejected and removed', 'warning');
-            }
-        } catch (error) {
-            showToast("Failed to remove review", "error");
-        }
-    };
-
-    const handleReplyClick = (review) => {
+    const openModerationModal = (review, newStatus) => {
         setSelectedReview(review);
-        setIsReplyModalOpen(true);
+        setTargetStatus(newStatus);
+        setModerationReason('');
+        setIsAuditModalOpen(true);
     };
 
-    const submitReply = () => {
-        if (!replyText.trim()) return;
-        // Reply logic for reviews is usually public or private. 
-        // For now we'll just show toast since we don't have review-reply model yet
-        showToast(`Reply noted for ${selectedReview.user}`, 'success');
-        setIsReplyModalOpen(false);
-        setReplyText('');
+    const handleStatusUpdate = async () => {
+        if (!selectedReview || !targetStatus) return;
+
+        try {
+            setActionLoading(true);
+            const res = await adminApi.updateProductRatingStatus(selectedReview.id, {
+                status: targetStatus,
+                moderationReason: moderationReason.trim()
+            });
+
+            if (res.data.success) {
+                showToast(`Rating status updated to ${targetStatus}`, 'success');
+                setIsAuditModalOpen(false);
+                fetchReviews(page);
+            }
+        } catch (error) {
+            showToast(error.response?.data?.message || "Failed to update rating status", "error");
+        } finally {
+            setActionLoading(false);
+        }
     };
 
     return (
         <div className="ds-section-spacing animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 px-1">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 px-1 mb-6">
                 <div>
-                    <h1 className="ds-h1">Moderation Suite</h1>
-                    <p className="ds-description mt-0.5">Protect community integrity and store reputations.</p>
+                    <h1 className="ds-h1">Product Ratings & Reviews Moderation</h1>
+                    <p className="ds-description mt-0.5">Protect community integrity and product quality standards.</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
+                    {/* Status Filter Tabs */}
                     <div className="flex bg-slate-100 p-1 rounded-xl">
-                        <button className="px-5 py-2 rounded-lg text-[10px] font-black uppercase bg-white text-slate-900 shadow-sm">ALL REVIEWS</button>
-                        <button className="px-5 py-2 rounded-lg text-[10px] font-black uppercase text-slate-400 hover:text-slate-600">FLAGGED ONLY</button>
+                        {[
+                            { label: "ALL", value: "" },
+                            { label: "ACTIVE", value: "ACTIVE" },
+                            { label: "FLAGGED", value: "FLAGGED" },
+                            { label: "HIDDEN", value: "HIDDEN" },
+                            { label: "REMOVED", value: "REMOVED" },
+                        ].map((tab) => (
+                            <button
+                                key={tab.value}
+                                onClick={() => {
+                                    setStatusFilter(tab.value);
+                                    setPage(1);
+                                }}
+                                className={cn(
+                                    "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all",
+                                    statusFilter === tab.value
+                                        ? "bg-white text-slate-900 shadow-sm"
+                                        : "text-slate-500 hover:text-slate-800"
+                                )}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Search */}
+                    <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-sm">
+                        <HiOutlineMagnifyingGlass className="text-slate-400 h-4 w-4" />
+                        <input
+                            type="text"
+                            placeholder="Search reviews..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && fetchReviews(1)}
+                            className="text-xs font-bold bg-transparent outline-none w-36"
+                        />
                     </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-6">
-                {reviews.map((r) => (
-                    <Card key={r.id} className="p-4 border-none shadow-xl ring-1 ring-slate-100 bg-white rounded-xl group overflow-hidden relative">
-                        {/* Decorative background icon */}
-                        <HiOutlineChatBubbleBottomCenterText className="absolute -top-6 -right-6 h-32 w-32 text-slate-50 opacity-[0.03] group-hover:scale-110 transition-transform duration-1000" />
+            {loading ? (
+                <div className="flex justify-center p-20">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+            ) : reviews.length === 0 ? (
+                <div className="p-16 text-center rounded-3xl bg-white border border-slate-100 shadow-sm">
+                    <p className="text-slate-400 font-black uppercase text-sm">No product ratings found.</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 gap-6">
+                    {reviews.map((r) => (
+                        <Card key={r.id} className="p-5 border-none shadow-xl ring-1 ring-slate-100 bg-white rounded-2xl group overflow-hidden relative">
+                            <HiOutlineChatBubbleBottomCenterText className="absolute -top-6 -right-6 h-32 w-32 text-slate-50 opacity-[0.03] group-hover:scale-110 transition-transform duration-1000" />
 
-                        <div className="flex flex-col lg:flex-row gap-4 relative z-10">
-                            {/* User Info & Rating */}
-                            <div className="lg:w-64 shrink-0 space-y-4">
-                                <div className="flex items-center gap-4">
-                                    <img
-                                        src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                                        alt=""
-                                        className="h-12 w-12 rounded-2xl bg-slate-50 ring-2 ring-white shadow-sm object-cover"
-                                    />
-                                    <div>
-                                        <h4 className="text-sm font-black text-slate-900">{r.user}</h4>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{r.date}</p>
+                            <div className="flex flex-col lg:flex-row gap-6 relative z-10">
+                                {/* Customer & Product Info */}
+                                <div className="lg:w-64 shrink-0 space-y-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-10 w-10 rounded-2xl bg-emerald-50 text-emerald-700 font-black text-sm flex items-center justify-center border border-emerald-100 shrink-0">
+                                            {r.customer?.[0] || "C"}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <h4 className="text-xs font-black text-slate-900 truncate">{r.customer}</h4>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{r.customerPhone || r.customerEmail}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Star Rating */}
+                                    <div className="flex items-center gap-1">
+                                        {[...Array(5)].map((_, i) => (
+                                            <HiOutlineStar
+                                                key={i}
+                                                className={cn("h-4 w-4", i < r.rating ? "text-amber-400 fill-amber-400" : "text-slate-200")}
+                                            />
+                                        ))}
+                                        <span className="text-xs font-black text-slate-700 ml-1">{r.rating}/5</span>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-black text-primary uppercase tracking-tighter truncate">Product: {r.productName}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase">Order #{r.orderId}</p>
+                                        <p className="text-[10px] text-slate-400 font-bold">{new Date(r.createdAt).toLocaleString()}</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                    {[...Array(5)].map((_, i) => (
-                                        <HiOutlineStar
-                                            key={i}
-                                            className={cn("h-4 w-4", i < r.rating ? "text-amber-400 fill-amber-400" : "text-slate-200")}
-                                        />
-                                    ))}
-                                </div>
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2 text-slate-500">
-                                        <HiOutlineBuildingStorefront className="h-4 w-4" />
-                                        <span className="text-[11px] font-bold">{r.store}</span>
-                                    </div>
-                                    <p className="text-[10px] font-black text-primary uppercase tracking-tighter">Item: {r.item}</p>
-                                </div>
-                            </div>
 
-                            {/* Comment & Status */}
-                            <div className="flex-1 space-y-4">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                    {r.status === 'flagged' && (
-                                        <Badge variant="danger" className="text-[8px] font-black uppercase tracking-widest flex items-center gap-1">
-                                            <HiOutlineExclamationTriangle className="h-3 w-3" />
-                                            FLAGGED BY SYSTEM
-                                        </Badge>
+                                {/* Rating Content & Status */}
+                                <div className="flex-1 space-y-3">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <span className={cn(
+                                            "text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full border",
+                                            r.status === 'ACTIVE' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                                            r.status === 'FLAGGED' ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                            r.status === 'HIDDEN' ? "bg-slate-100 text-slate-600 border-slate-200" :
+                                            "bg-rose-50 text-rose-700 border-rose-200"
+                                        )}>
+                                            Status: {r.status}
+                                        </span>
+
+                                        {r.isVerifiedPurchase && (
+                                            <span className="inline-flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 uppercase">
+                                                <ShieldCheck size={10} /> Verified Purchase
+                                            </span>
+                                        )}
+
+                                        {(r.feedbackTags || []).map((tag, idx) => (
+                                            <Badge key={idx} variant="secondary" className="text-[9px] font-bold text-slate-500 bg-slate-50 border-none px-2">
+                                                {tag.replace(/_/g, " ")}
+                                            </Badge>
+                                        ))}
+                                    </div>
+
+                                    {r.comment ? (
+                                        <blockquote className="text-xs font-medium text-slate-700 leading-relaxed bg-slate-50/60 p-4 rounded-2xl border-l-4 border-slate-300">
+                                            "{r.comment}"
+                                        </blockquote>
+                                    ) : (
+                                        <p className="text-xs text-slate-400 italic">No written comment provided.</p>
                                     )}
-                                    {r.tags.map((tag, i) => (
-                                        <Badge key={i} variant="secondary" className="text-[8px] font-bold text-slate-400 bg-slate-50 border-none px-2">{tag}</Badge>
-                                    ))}
-                                </div>
-                                <blockquote className="text-sm font-medium text-slate-700 leading-relaxed bg-slate-50/50 p-5 rounded-2xl italic italic border-l-4 border-slate-100">
-                                    "{r.comment}"
-                                </blockquote>
-                            </div>
 
-                            {/* Actions */}
-                            <div className="lg:w-48 flex lg:flex-col items-center justify-center gap-3">
-                                {r.status !== 'approved' && (
-                                    <button
-                                        onClick={() => handleApprove(r.id)}
-                                        className="flex-1 w-full flex items-center justify-center gap-2 py-3 bg-brand-500 text-primary-foreground rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-brand-200 hover:bg-black  transition-all active:scale-95"
-                                    >
-                                        <HiOutlineShieldCheck className="h-4 w-4" />
-                                        APPROVE
-                                    </button>
-                                )}
-                                <button
-                                    onClick={() => handleDelete(r.id)}
-                                    className="flex-1 w-full flex items-center justify-center gap-2 py-3 bg-white text-rose-500 ring-1 ring-rose-100 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 transition-all active:scale-95"
-                                >
-                                    <HiOutlineTrash className="h-4 w-4" />
-                                    REMOVE
-                                </button>
-                                <button
-                                    onClick={() => handleReplyClick(r)}
-                                    className="flex-1 w-full flex items-center justify-center gap-2 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-slate-800 transition-all active:scale-95"
-                                >
-                                    REPLY
-                                </button>
+                                    {r.moderationReason && (
+                                        <p className="text-[10px] font-bold text-rose-600 bg-rose-50 p-2 rounded-xl border border-rose-100">
+                                            Moderation Note: {r.moderationReason}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Actions */}
+                                <div className="lg:w-44 flex lg:flex-col items-center justify-center gap-2">
+                                    {r.status !== 'ACTIVE' && (
+                                        <button
+                                            onClick={() => openModerationModal(r, 'ACTIVE')}
+                                            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-1.5"
+                                        >
+                                            <HiOutlineShieldCheck className="h-4 w-4" />
+                                            Set Active
+                                        </button>
+                                    )}
+                                    {r.status !== 'HIDDEN' && (
+                                        <button
+                                            onClick={() => openModerationModal(r, 'HIDDEN')}
+                                            className="w-full py-2.5 bg-slate-700 hover:bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-1.5"
+                                        >
+                                            <HiOutlineEyeSlash className="h-4 w-4" />
+                                            Hide Review
+                                        </button>
+                                    )}
+                                    {r.status !== 'REMOVED' && (
+                                        <button
+                                            onClick={() => openModerationModal(r, 'REMOVED')}
+                                            className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-1.5"
+                                        >
+                                            <HiOutlineTrash className="h-4 w-4" />
+                                            Remove
+                                        </button>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    </Card>
-                ))}
-            </div>
+                        </Card>
+                    ))}
+                </div>
+            )}
+
             <div className="mt-6 flex justify-center">
                 <Pagination
                     page={page}
@@ -216,36 +279,35 @@ const ReviewModeration = () => {
                 />
             </div>
 
+            {/* Moderation Reason Audit Modal */}
             <Modal
-                isOpen={isReplyModalOpen}
-                onClose={() => setIsReplyModalOpen(false)}
-                title="Send Public Response"
+                isOpen={isAuditModalOpen}
+                onClose={() => setIsAuditModalOpen(false)}
+                title={`Moderate Rating to ${targetStatus}`}
             >
-                <div className="space-y-4">
-                    {selectedReview && (
-                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                            <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Review from {selectedReview.user}</p>
-                            <p className="text-xs font-medium text-slate-600 italic">"{selectedReview.comment}"</p>
-                        </div>
-                    )}
+                <div className="space-y-4 max-w-sm mx-auto">
+                    <p className="text-xs text-slate-500 font-medium">
+                        Changing status will automatically recalculate the product rating aggregate.
+                    </p>
                     <textarea
-                        value={replyText}
-                        onChange={(e) => setReplyText(e.target.value)}
-                        placeholder="Write your official response..."
-                        className="w-full bg-slate-100 border-none rounded-2xl p-4 text-sm font-bold min-h-[120px] outline-none ring-1 ring-transparent focus:ring-primary/20"
+                        value={moderationReason}
+                        onChange={(e) => setModerationReason(e.target.value)}
+                        placeholder="Reason for moderation (optional)..."
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 text-xs font-bold min-h-[90px] outline-none focus:border-slate-900 transition-all"
                     />
                     <div className="flex gap-3">
                         <button
-                            onClick={() => setIsReplyModalOpen(false)}
-                            className="flex-1 py-4 bg-slate-100 text-slate-400 text-[10px] font-black uppercase rounded-2xl"
+                            onClick={() => setIsAuditModalOpen(false)}
+                            className="flex-1 py-3 bg-slate-100 text-slate-600 text-[10px] font-black uppercase rounded-xl"
                         >
-                            CANCEL
+                            Cancel
                         </button>
                         <button
-                            onClick={submitReply}
-                            className="flex-1 py-4 bg-primary text-primary-foreground text-[10px] font-black uppercase rounded-2xl shadow-lg shadow-primary/20"
+                            onClick={handleStatusUpdate}
+                            disabled={actionLoading}
+                            className="flex-1 py-3 bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-black uppercase rounded-xl shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
                         >
-                            PUBLISH REPLY
+                            {actionLoading ? <Loader2 size={14} className="animate-spin" /> : 'Confirm Status Change'}
                         </button>
                     </div>
                 </div>

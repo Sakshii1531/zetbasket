@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import InvoiceModal from "../components/order/InvoiceModal";
 import HelpModal from "../components/order/HelpModal";
 import DeliveryRatingModal from "../components/order/DeliveryRatingModal";
+import ProductRatingModal from "../components/order/ProductRatingModal";
 import LiveTrackingMap from "../components/order/LiveTrackingMap";
 import DeliveryOtpDisplay from "../components/DeliveryOtpDisplay";
 import OrderProgressTracker from "../components/order/OrderProgressTracker";
@@ -142,6 +143,7 @@ const OrderDetailPage = () => {
   const [showInvoice, setShowInvoice] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
+  const [showProductRatingModal, setShowProductRatingModal] = useState(false);
   const [ratingEligibility, setRatingEligibility] = useState(null);
   const [existingRating, setExistingRating] = useState(null);
   const [order, setOrder] = useState(null);
@@ -971,6 +973,33 @@ const OrderDetailPage = () => {
           </motion.div>
         )}
 
+        {/* Product Rating Card for Delivered Orders */}
+        {isDelivered && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100">
+                  <Star size={20} className="fill-amber-400 text-amber-400" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-wide">Product Ratings</h4>
+                  <p className="text-[11px] text-slate-500 font-medium">Rate the quality & freshness of your items</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowProductRatingModal(true)}
+                className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all shadow-md active:scale-95"
+              >
+                Rate Products
+              </button>
+            </div>
+          </motion.div>
+        )}
+
         {/* Pickup Location Card - Redesigned */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -1484,6 +1513,13 @@ const OrderDetailPage = () => {
           setExistingRating(ratingData);
           setRatingEligibility({ eligible: false, hasRated: true });
         }}
+      />
+
+      {/* Product Rating Modal */}
+      <ProductRatingModal
+        isOpen={showProductRatingModal}
+        onClose={() => setShowProductRatingModal(false)}
+        orderId={resolveOrderLookupId(order)}
       />
     </div>
   );

@@ -72,15 +72,25 @@ const ProductDetailPage = () => {
         }
     };
 
+    const [ratingSummary, setRatingSummary] = useState({ average: 0, count: 0, distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } });
+    const [selectedStarFilter, setSelectedStarFilter] = useState(null);
+
     const fetchReviews = async () => {
         try {
             setReviewLoading(true);
-            const res = await customerApi.getProductReviews(id);
-            if (res.data.success) {
-                setReviews(res.data.results || []);
+            const [reviewsRes, summaryRes] = await Promise.all([
+                customerApi.getProductRatingsList(id, { rating: selectedStarFilter }),
+                customerApi.getProductRatingSummary(id)
+            ]);
+
+            if (reviewsRes.data.success) {
+                setReviews(reviewsRes.data.result?.items || reviewsRes.data.results || []);
+            }
+            if (summaryRes.data.success) {
+                setRatingSummary(summaryRes.data.result || { average: 0, count: 0, distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } });
             }
         } catch (error) {
-            console.error("Fetch reviews error:", error);
+            console.error("Fetch product ratings error:", error);
         } finally {
             setReviewLoading(false);
         }
@@ -402,12 +412,59 @@ const ProductDetailPage = () => {
 
                     <div className="lg:w-[60%] space-y-8">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-3xl font-black text-slate-800">Customer Reviews</h3>
-                            <div className="flex items-center gap-2 px-4 py-2 bg-primary/5 rounded-xl border border-primary/10">
-                                <MessageSquare size={18} className="text-primary" />
-                                <span className="font-black text-primary">{reviews.length} Verified</span>
+                            <div>
+                                <h3 className="text-3xl font-black text-slate-800">Customer Ratings & Reviews</h3>
+                                <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">
+                                    {ratingSummary.count > 0 ? `${ratingSummary.count} Verified Customer Ratings` : 'No ratings yet'}
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 rounded-2xl border border-emerald-100">
+                                <ShieldCheck size={18} className="text-emerald-600" />
+                                <span className="font-black text-emerald-800 text-xs uppercase tracking-wider">100% Verified Purchases</span>
                             </div>
                         </div>
+
+                        {/* Rating Summary Breakdown Box */}
+                        {ratingSummary.count > 0 && (
+                            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col md:flex-row gap-6 items-center">
+                                <div className="text-center md:text-left shrink-0">
+                                    <div className="text-5xl font-black text-slate-900 tracking-tight">
+                                        {ratingSummary.average > 0 ? ratingSummary.average.toFixed(1) : "0.0"}
+                                    </div>
+                                    <div className="flex justify-center md:justify-start gap-1 my-2">
+                                        {[1, 2, 3, 4, 5].map((s) => (
+                                            <Star
+                                                key={s}
+                                                size={16}
+                                                className={cn(s <= Math.round(ratingSummary.average) ? "fill-amber-400 text-amber-400" : "text-slate-200")}
+                                            />
+                                        ))}
+                                    </div>
+                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                                        Based on {ratingSummary.count} rating{ratingSummary.count === 1 ? '' : 's'}
+                                    </p>
+                                </div>
+
+                                <div className="flex-1 w-full space-y-2">
+                                    {[5, 4, 3, 2, 1].map((star) => {
+                                        const count = ratingSummary.distribution?.[star] || 0;
+                                        const percent = ratingSummary.count > 0 ? Math.round((count / ratingSummary.count) * 100) : 0;
+                                        return (
+                                            <div key={star} className="flex items-center gap-3 text-xs font-bold text-slate-600">
+                                                <span className="w-6 text-right shrink-0">{star} ★</span>
+                                                <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-amber-400 rounded-full transition-all duration-500"
+                                                        style={{ width: `${percent}%` }}
+                                                    />
+                                                </div>
+                                                <span className="w-10 text-right text-[11px] text-slate-400 shrink-0">{percent}%</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
 
                         {reviewLoading ? (
                             <div className="flex justify-center p-20">
@@ -416,37 +473,58 @@ const ProductDetailPage = () => {
                         ) : reviews.length > 0 ? (
                             <div className="space-y-6">
                                 {reviews.map((review) => (
-                                    <div key={review._id} className="p-8 rounded-[2rem] bg-white border border-slate-100 shadow-sm">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className="h-12 w-12 rounded-2xl bg-slate-50 flex items-center justify-center font-black text-slate-400 text-xl">
-                                                    {review.userId?.name?.[0] || "?"}
+                                    <div key={review.id || review._id} className="p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm space-y-3">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-10 w-10 rounded-2xl bg-emerald-50 text-emerald-700 font-black text-sm flex items-center justify-center border border-emerald-100">
+                                                    {review.customerName?.[0] || "V"}
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-black text-slate-800">
-                                                        {review.userId?.name || "Anonymous"}
-                                                        {review.status === 'pending' && <span className="ml-2 text-[10px] font-bold text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded uppercase">Pending</span>}
-                                                    </h4>
+                                                    <div className="flex items-center gap-2">
+                                                        <h4 className="font-black text-slate-800 text-sm">
+                                                            {review.customerName || "Verified Customer"}
+                                                        </h4>
+                                                        {review.isVerifiedPurchase && (
+                                                            <span className="inline-flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 uppercase tracking-widest">
+                                                                <ShieldCheck size={10} /> Verified Purchase
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <div className="flex items-center gap-1 mt-1">
                                                         {[...Array(5)].map((_, i) => (
                                                             <Star
                                                                 key={i}
-                                                                size={12}
-                                                                className={cn(i < review.rating ? "text-orange-400 fill-orange-400" : "text-slate-200")}
+                                                                size={13}
+                                                                className={cn(i < review.rating ? "text-amber-400 fill-amber-400" : "text-slate-200")}
                                                             />
                                                         ))}
                                                     </div>
                                                 </div>
                                             </div>
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{new Date(review.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                {new Date(review.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                            </span>
                                         </div>
-                                        <p className="text-slate-600 font-medium leading-relaxed">{review.comment}</p>
+
+                                        {review.feedbackTags?.length > 0 && (
+                                            <div className="flex flex-wrap gap-1.5 pt-1">
+                                                {review.feedbackTags.map((tag) => (
+                                                    <span key={tag} className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-xl text-[10px] font-bold uppercase tracking-wide">
+                                                        {tag.replace(/_/g, " ")}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {review.comment && (
+                                            <p className="text-slate-700 font-medium text-sm leading-relaxed pt-1">"{review.comment}"</p>
+                                        )}
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <div className="p-20 text-center rounded-[3rem] bg-slate-50 border-2 border-dashed border-slate-200">
-                                <p className="text-slate-400 font-black uppercase text-sm">No reviews yet. Be the first!</p>
+                            <div className="p-16 text-center rounded-[3rem] bg-slate-50 border-2 border-dashed border-slate-200">
+                                <p className="text-slate-400 font-black uppercase text-sm">No active reviews yet for this product.</p>
                             </div>
                         )}
                     </div>

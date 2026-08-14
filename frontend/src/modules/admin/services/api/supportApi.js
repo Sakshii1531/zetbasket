@@ -36,6 +36,12 @@ export const adminSupportApi = {
         axiosInstance.get('/reviews/admin/pending', { params }),
     updateReviewStatus: (id, status) =>
         axiosInstance.patch(`/reviews/admin/status/${id}`, { status }),
+
+    // Product Ratings moderation
+    getAdminProductRatings: (params) =>
+        axiosInstance.get('/product-ratings/admin', { params }),
+    updateProductRatingStatus: (id, data) =>
+        axiosInstance.patch(`/product-ratings/admin/${id}/status`, typeof data === 'string' ? { status: data } : data),
 };
 
 export default adminSupportApi;

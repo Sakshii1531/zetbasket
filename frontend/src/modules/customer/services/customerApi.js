@@ -104,6 +104,16 @@ export const customerApi = {
     invalidateCache("/reviews/product");
     return axiosInstance.post("/reviews/submit", data);
   },
+  getProductRatingEligibility: (orderId) =>
+    axiosInstance.get(`/product-ratings/eligibility/${encodeURIComponent(String(orderId || "").trim())}`),
+  submitProductRating: (data) =>
+    axiosInstance.post("/product-ratings", data),
+  getOrderProductRatings: (orderId) =>
+    axiosInstance.get(`/product-ratings/orders/${encodeURIComponent(String(orderId || "").trim())}`),
+  getProductRatingsList: (productId, params) =>
+    getWithDedupe(`/product-ratings/products/${encodeURIComponent(String(productId || "").trim())}/ratings`, params),
+  getProductRatingSummary: (productId) =>
+    getWithDedupe(`/product-ratings/products/${encodeURIComponent(String(productId || "").trim())}/rating-summary`),
   createTicket: (data) => axiosInstance.post("/tickets/create", data),
   getMyTickets: () => getWithDedupe("/tickets/my-tickets"),
   replyTicket: (ticketId, text, options = {}) => {

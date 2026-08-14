@@ -142,6 +142,29 @@ const productSchema = new mongoose.Schema(
                 trim: true,
             }],
         },
+        ratingAverage: {
+            type: Number,
+            default: 0,
+            min: 0,
+            max: 5,
+        },
+        ratingCount: {
+            type: Number,
+            default: 0,
+            min: 0,
+        },
+        ratingSum: {
+            type: Number,
+            default: 0,
+            min: 0,
+        },
+        ratingDistribution: {
+            1: { type: Number, default: 0 },
+            2: { type: Number, default: 0 },
+            3: { type: Number, default: 0 },
+            4: { type: Number, default: 0 },
+            5: { type: Number, default: 0 },
+        },
     },
     { timestamps: true }
 );

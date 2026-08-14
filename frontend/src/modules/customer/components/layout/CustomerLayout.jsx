@@ -80,16 +80,18 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
     const path = location.pathname.replace(/\/$/, '') || '/';
 
     const hideHeaderRoutes = ['/', '/categories', '/orders', '/transactions', '/profile', '/profile/edit', '/wishlist', '/addresses', '/wallet', '/support', '/privacy', '/about', '/terms', '/checkout', '/search', '/chat', '/notifications'];
-    const hideBottomNavRoutes = ['/checkout', '/search', '/chat'];
+    const hideBottomNavRoutes = ['/checkout', '/search', '/chat', '/privacy', '/terms'];
+    const hideFooterRoutes = ['/privacy', '/terms'];
     const hideCartRoutes = ['/checkout', '/search', '/chat'];
 
     // If props are passed, use them. Otherwise, use route-based logic.
     const showHeader = showHeaderProp !== undefined ? showHeaderProp : (!hideHeaderRoutes.includes(path) && !path.startsWith('/category') && !path.startsWith('/orders'));
     const showBottomNav = showBottomNavProp !== undefined ? showBottomNavProp : !hideBottomNavRoutes.includes(path);
     const showCart = showCartProp !== undefined ? showCartProp : (!hideCartRoutes.includes(path) && !path.startsWith('/orders'));
+    const showFooter = !hideFooterRoutes.includes(path);
 
     // Condition to hide the MobileFooterMessage ("India's last minute app") on specific pages
-    const hideFooterMessageRoutes = ['/profile', '/profile/edit'];
+    const hideFooterMessageRoutes = ['/profile', '/profile/edit', '/privacy', '/terms'];
     const showFooterMessage = showBottomNav && !hideFooterMessageRoutes.includes(path) && !path.startsWith('/category');
 
     // Hide elements on mobile only when product detail is open
@@ -121,9 +123,11 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
             {showCart && <MiniCart />}
             <ProductDetailSheet />
 
-            <div className="hidden md:block">
-                <Footer />
-            </div>
+            {showFooter && (
+                <div className="hidden md:block">
+                    <Footer />
+                </div>
+            )}
 
             {/* Mobile Footer Message logic */}
             <div className="md:hidden">
