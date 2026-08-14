@@ -42,6 +42,7 @@ const SupportTickets = () => {
     const [reply, setReply] = useState('');
     const [menuOpen, setMenuOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [roleFilter, setRoleFilter] = useState('all'); // 'all', 'Customer', 'Seller', 'Rider'
     const [loading, setLoading] = useState(true);
     const [tickets, setTickets] = useState([]);
     const [page, setPage] = useState(1);
@@ -335,11 +336,23 @@ const SupportTickets = () => {
         return handleSetStatus(id, newStatus);
     };
 
-    const filteredTickets = tickets.filter(t =>
-        t.id.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.subject.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const customerCount = tickets.filter(t => ['customer', 'user'].includes(String(t.userType || '').toLowerCase())).length;
+    const sellerCount = tickets.filter(t => String(t.userType || '').toLowerCase() === 'seller').length;
+    const riderCount = tickets.filter(t => ['rider', 'delivery'].includes(String(t.userType || '').toLowerCase())).length;
+
+    const filteredTickets = tickets.filter(t => {
+        const matchesSearch = t.id.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
+            t.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            t.subject.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        if (!matchesSearch) return false;
+        if (roleFilter === 'all') return true;
+        const type = String(t.userType || '').toLowerCase();
+        if (roleFilter === 'Customer') return type === 'customer' || type === 'user';
+        if (roleFilter === 'Seller') return type === 'seller';
+        if (roleFilter === 'Rider') return type === 'rider' || type === 'delivery';
+        return true;
+    });
 
     return (
         <div className="h-[calc(100vh-140px)] flex flex-col lg:flex-row gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -354,6 +367,8 @@ const SupportTickets = () => {
                             <h2 className="text-xl font-black text-slate-900 tracking-tight">Support Desk</h2>
                             <Badge variant="blue" className="text-[10px] font-black">{tickets.length} ACTIVE</Badge>
                         </div>
+                        
+                        {/* Search Input */}
                         <div className="relative group">
                             <HiOutlineMagnifyingGlass className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                             <input
@@ -364,55 +379,96 @@ const SupportTickets = () => {
                                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border-2 border-slate-800/40 focus:border-slate-900 rounded-2xl text-xs font-bold outline-none transition-all"
                             />
                         </div>
+
+                        {/* Role Filter Tabs */}
+                        <div className="grid grid-cols-4 gap-1 bg-slate-100 p-1 rounded-xl">
+                            {[
+                                { id: 'all', label: 'All', icon: null, count: tickets.length },
+                                { id: 'Customer', label: 'Cust.', icon: HiOutlineUser, count: customerCount },
+                                { id: 'Seller', label: 'Seller', icon: HiOutlineBuildingStorefront, count: sellerCount },
+                                { id: 'Rider', label: 'Rider', icon: HiOutlineTruck, count: riderCount },
+                            ].map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setRoleFilter(tab.id)}
+                                    className={cn(
+                                        "py-1.5 px-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 truncate",
+                                        roleFilter === tab.id
+                                            ? "bg-white text-slate-900 shadow-sm"
+                                            : "text-slate-500 hover:text-slate-800"
+                                    )}
+                                    title={tab.label}
+                                >
+                                    {tab.icon && <tab.icon className="h-3 w-3 shrink-0" />}
+                                    <span>{tab.label}</span>
+                                    <span className="text-[8px] opacity-70">({tab.count})</span>
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                        {filteredTickets.map((t) => (
-                            <button
-                                key={t.id}
-                                onClick={() => setSelectedTicket(t)}
-                                className={cn(
-                                    "w-full text-left p-4 pr-10 rounded-2xl transition-all group relative overflow-hidden border border-slate-800/20 bg-white",
-                                    selectedTicket?.id === t.id
-                                        ? "bg-slate-900 text-white shadow-xl translate-x-1 border-black/30"
-                                        : "hover:bg-slate-50 hover:border-slate-800/30 text-slate-700"
-                                )}
-                            >
-                                {Number(unreadByTicket?.[t.id] || 0) > 0 && (
-                                    <span
-                                        className={cn(
-                                            "absolute top-3 right-3 min-w-5 h-5 px-1.5 rounded-full text-[10px] font-black flex items-center justify-center shadow-lg ring-2",
-                                            selectedTicket?.id === t.id
-                                                ? "bg-rose-500 text-white ring-slate-900 shadow-rose-500/30"
-                                                : "bg-rose-500 text-white ring-white shadow-rose-500/30",
-                                        )}
-                                        aria-label={`Unread messages: ${unreadByTicket?.[t.id]}`}
-                                    >
-                                        {Number(unreadByTicket?.[t.id] || 0) > 99 ? "99+" : String(unreadByTicket?.[t.id])}
-                                    </span>
-                                )}
-                                <div className="flex items-start justify-between mb-2">
-                                    <Badge
-                                        variant={t.priority === 'high' ? 'danger' : t.priority === 'medium' ? 'warning' : 'secondary'}
-                                        className={cn("text-[8px] font-black uppercase tracking-widest", selectedTicket?.id === t.id && "bg-white/20 text-white border-none")}
-                                    >
-                                        {t.priority}
-                                    </Badge>
-                                    <span className={cn("text-[9px] font-bold opacity-60", selectedTicket?.id === t.id ? "text-white" : "text-slate-400")}>{t.date}</span>
-                                </div>
-                                <h4 className="text-xs font-black truncate mb-1">{t.subject}</h4>
-                                <div className="flex items-center gap-2">
-                                    <div className={cn("p-1 rounded-md", selectedTicket?.id === t.id ? "bg-white/10" : "bg-slate-100")}>
-                                        {t.userType === 'Customer' && <HiOutlineUser className="h-3 w-3" />}
-                                        {t.userType === 'Seller' && <HiOutlineBuildingStorefront className="h-3 w-3" />}
-                                        {t.userType === 'Rider' && <HiOutlineTruck className="h-3 w-3" />}
+                        {filteredTickets.map((t) => {
+                            const isSelected = selectedTicket?.id === t.id;
+                            const rawType = String(t.userType || '').toLowerCase();
+                            const isSeller = rawType === 'seller';
+                            const isRider = rawType === 'rider' || rawType === 'delivery';
+
+                            const roleLabel = isSeller ? 'SELLER' : isRider ? 'DELIVERY BOY' : 'CUSTOMER';
+                            const RoleIcon = isSeller ? HiOutlineBuildingStorefront : isRider ? HiOutlineTruck : HiOutlineUser;
+
+                            const badgeStyle = isSelected
+                                ? (isSeller ? 'bg-purple-500/20 text-purple-200 border-purple-400/30' : isRider ? 'bg-emerald-500/20 text-emerald-200 border-emerald-400/30' : 'bg-sky-500/20 text-sky-200 border-sky-400/30')
+                                : (isSeller ? 'bg-purple-50 text-purple-700 border-purple-200' : isRider ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-sky-50 text-sky-700 border-sky-200');
+
+                            return (
+                                <button
+                                    key={t.id}
+                                    onClick={() => setSelectedTicket(t)}
+                                    className={cn(
+                                        "w-full text-left p-4 pr-10 rounded-2xl transition-all group relative overflow-hidden border border-slate-800/20 bg-white",
+                                        isSelected
+                                            ? "bg-slate-900 text-white shadow-xl translate-x-1 border-black/30"
+                                            : "hover:bg-slate-50 hover:border-slate-800/30 text-slate-700"
+                                    )}
+                                >
+                                    {Number(unreadByTicket?.[t.id] || 0) > 0 && (
+                                        <span
+                                            className={cn(
+                                                "absolute top-3 right-3 min-w-5 h-5 px-1.5 rounded-full text-[10px] font-black flex items-center justify-center shadow-lg ring-2",
+                                                isSelected
+                                                    ? "bg-rose-500 text-white ring-slate-900 shadow-rose-500/30"
+                                                    : "bg-rose-500 text-white ring-white shadow-rose-500/30",
+                                            )}
+                                            aria-label={`Unread messages: ${unreadByTicket?.[t.id]}`}
+                                        >
+                                            {Number(unreadByTicket?.[t.id] || 0) > 99 ? "99+" : String(unreadByTicket?.[t.id])}
+                                        </span>
+                                    )}
+                                    <div className="flex items-start justify-between mb-2">
+                                        <Badge
+                                            variant={t.priority === 'high' ? 'danger' : t.priority === 'medium' ? 'warning' : 'secondary'}
+                                            className={cn("text-[8px] font-black uppercase tracking-widest", isSelected && "bg-white/20 text-white border-none")}
+                                        >
+                                            {t.priority}
+                                        </Badge>
+                                        <span className={cn("text-[9px] font-bold opacity-60", isSelected ? "text-white" : "text-slate-400")}>{t.date}</span>
                                     </div>
-                                    <span className={cn("text-[10px] font-bold", selectedTicket?.id === t.id ? "text-white/80" : "text-slate-500")}>
-                                        {t.user} • {t.userType}
-                                    </span>
-                                </div>
-                            </button>
-                        ))}
+                                    <h4 className="text-xs font-black truncate mb-1">{t.subject}</h4>
+                                    
+                                    {/* Role Badge & User Name */}
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <span className={cn("px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider border flex items-center gap-1 shrink-0", badgeStyle)}>
+                                            <RoleIcon className="h-3 w-3 shrink-0" />
+                                            {roleLabel}
+                                        </span>
+                                        <span className={cn("text-[11px] font-bold truncate", isSelected ? "text-white/90" : "text-slate-700")}>
+                                            {t.user}
+                                        </span>
+                                    </div>
+                                </button>
+                            );
+                        })}
                     </div>
                     <div className="p-4 border-t border-slate-100">
                         <Pagination
@@ -441,17 +497,34 @@ const SupportTickets = () => {
                     >
                         {/* Chat Header */}
                         <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/30 shrink-0">
-                            <div className="flex items-center gap-4">
-                                <div className="h-12 w-12 rounded-2xl bg-white ring-1 ring-slate-100 flex items-center justify-center text-slate-400 shadow-sm">
-                                    <HiOutlineChatBubbleLeftRight className="h-6 w-6" />
-                                </div>
-                                <div>
-                                    <h3 className="text-sm font-black text-slate-900 leading-none mb-1">{selectedTicket.subject}</h3>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">
-                                        Ticket ID: {selectedTicket.ticketCode} • USER: {selectedTicket.user} • STATUS: {selectedTicket.status}
-                                    </p>
-                                </div>
-                            </div>
+                            {(() => {
+                                const rawType = String(selectedTicket.userType || '').toLowerCase();
+                                const isSeller = rawType === 'seller';
+                                const isRider = rawType === 'rider' || rawType === 'delivery';
+
+                                const roleLabel = isSeller ? 'SELLER STORE' : isRider ? 'DELIVERY BOY' : 'CUSTOMER';
+                                const RoleIcon = isSeller ? HiOutlineBuildingStorefront : isRider ? HiOutlineTruck : HiOutlineUser;
+                                const roleBadgeClass = isSeller ? 'bg-purple-100 text-purple-800 border-purple-200' : isRider ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-sky-100 text-sky-800 border-sky-200';
+
+                                return (
+                                    <div className="flex items-center gap-4">
+                                        <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center shadow-sm border shrink-0", roleBadgeClass)}>
+                                            <RoleIcon className="h-6 w-6" />
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h3 className="text-sm font-black text-slate-900 leading-none">{selectedTicket.subject}</h3>
+                                                <span className={cn("px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border", roleBadgeClass)}>
+                                                    {roleLabel}
+                                                </span>
+                                            </div>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">
+                                                Ticket ID: #{selectedTicket.ticketCode} • USER: {selectedTicket.user} • STATUS: {selectedTicket.status}
+                                            </p>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                             <div className="relative flex items-center gap-2">
                                 <button
                                     onClick={() => handleResolve(selectedTicket.id)}
