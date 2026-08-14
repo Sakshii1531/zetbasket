@@ -14,7 +14,7 @@ const BottomNav = () => {
     const location = useLocation();
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-[500] bg-white border-t border-gray-100 flex items-center justify-around h-[65px] md:hidden shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-2 pb-[env(safe-area-inset-bottom)]">
+        <nav className="fixed bottom-0 left-0 right-0 z-[500] bg-white border-t border-slate-200/80 flex items-center justify-around h-[62px] md:hidden shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-1 pb-[env(safe-area-inset-bottom)] select-none">
             {navItems.map((item) => {
                 const isActive = location.pathname === item.path ||
                     (item.path !== '/' && location.pathname.startsWith(item.path));
@@ -23,35 +23,37 @@ const BottomNav = () => {
                     <Link
                         key={item.path}
                         to={item.path}
-                        className="flex-1 flex flex-col items-center justify-center h-full relative group transition-all"
+                        className="flex-1 flex flex-col items-center justify-center h-full py-1 group transition-all"
                     >
                         <div
                             className={cn(
-                                "flex flex-col items-center justify-center py-1 px-3.5 rounded-full transition-all duration-300",
-                                isActive ? "bg-primary/10 text-primary" : "text-gray-400 hover:text-gray-600"
+                                "w-12 h-7 rounded-full flex items-center justify-center transition-all duration-200 mb-0.5",
+                                isActive
+                                    ? "bg-emerald-100/90 text-emerald-800 font-bold"
+                                    : "text-slate-400 group-hover:text-slate-600"
                             )}
                         >
                             <item.icon
-                                size={20}
+                                size={18}
                                 strokeWidth={isActive ? 2.5 : 1.8}
                                 className={cn(
-                                    "transition-transform duration-300",
-                                    isActive ? "scale-110" : "scale-100"
+                                    "transition-transform duration-200",
+                                    isActive && "scale-105"
                                 )}
                             />
-                            <span className="text-[10px] font-semibold tracking-tight mt-0.5">
-                                {item.label}
-                            </span>
                         </div>
-
-                        {/* Top Accent Indicator */}
-                        {isActive && (
-                            <div className="absolute -top-[1px] w-6 h-[3px] bg-primary rounded-full transition-all duration-300" />
-                        )}
+                        <span
+                            className={cn(
+                                "text-[10px] tracking-tight leading-none transition-colors",
+                                isActive ? "font-black text-emerald-800" : "font-semibold text-slate-500"
+                            )}
+                        >
+                            {item.label}
+                        </span>
                     </Link>
                 );
             })}
-        </div>
+        </nav>
     );
 };
 

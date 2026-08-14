@@ -18,9 +18,9 @@ const STORAGE_KEY = STORAGE_KEYS.LOCATION;
 const LOCATION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 export const LocationProvider = ({ children }) => {
-  // Default location (used until we can resolve a better one)
+  // Default location (used until user selects or we resolve a saved one)
   const [currentLocation, setCurrentLocation] = useState({
-    name: "214, Rajshri Palace Colony, Pipliyahana, Indore, Madhya Pradesh 452018, India",
+    name: "Select delivery location",
     time: "12-15 mins",
     city: "Indore",
     state: "Madhya Pradesh",
@@ -253,31 +253,55 @@ export const LocationProvider = ({ children }) => {
       const { data } = await customerApi.getProfile();
       const profile = data?.result ?? data?.data ?? data;
       const raw = Array.isArray(profile?.addresses) ? profile.addresses : [];
-      setSavedAddresses(
-        raw.map((addr, idx) => ({
-          id: addr._id ?? String(idx),
-          label:
-            (addr.label || "Home").charAt(0).toUpperCase() +
-            (addr.label || "home").slice(1),
-          address:
-            addr.fullAddress ||
-            [addr.landmark, addr.city, addr.state, addr.pincode]
-              .filter(Boolean)
-              .join(", ") ||
-            "",
-          location:
-            addr?.location &&
-            typeof addr.location.lat === "number" &&
-            typeof addr.location.lng === "number" &&
-            Number.isFinite(addr.location.lat) &&
-            Number.isFinite(addr.location.lng)
-              ? { lat: addr.location.lat, lng: addr.location.lng }
-              : null,
-          placeId: typeof addr?.placeId === "string" ? addr.placeId : null,
-          phone: profile?.phone ?? "",
-          isCurrent: idx === 0,
-        })),
-      );
+      const mappedAddresses = raw.map((addr, idx) => ({
+        id: addr._id ?? String(idx),
+        label:
+          (addr.label || "Home").charAt(0).toUpperCase() +
+          (addr.label || "home").slice(1),
+        address:
+          addr.fullAddress ||
+          [addr.landmark, addr.city, addr.state, addr.pincode]
+            .filter(Boolean)
+            .join(", ") ||
+          "",
+        city: addr.city || "",
+        state: addr.state || "",
+        pincode: addr.pincode || "",
+        location:
+          addr?.location &&
+          typeof addr.location.lat === "number" &&
+          typeof addr.location.lng === "number" &&
+          Number.isFinite(addr.location.lat) &&
+          Number.isFinite(addr.location.lng)
+            ? { lat: addr.location.lat, lng: addr.location.lng }
+            : null,
+        placeId: typeof addr?.placeId === "string" ? addr.placeId : null,
+        phone: profile?.phone ?? "",
+        isCurrent: idx === 0,
+      }));
+      setSavedAddresses(mappedAddresses);
+
+      // Auto-set user's primary saved address if available and current location is default/Rajshri Palace
+      if (mappedAddresses.length > 0) {
+        const primary = mappedAddresses[0];
+        if (primary.address) {
+          const stored = getJSON(STORAGE_KEY, null);
+          const storedName = stored?.address || stored?.name || "";
+          if (!stored || !storedName || storedName.includes("Rajshri Palace") || storedName === "Select delivery location") {
+            const newLoc = {
+              name: primary.address,
+              time: "12-15 mins",
+              city: primary.city || "Indore",
+              state: primary.state || "Madhya Pradesh",
+              pincode: primary.pincode || "452018",
+              latitude: primary.location?.lat || 22.711140989838025,
+              longitude: primary.location?.lng || 75.9001552518043,
+            };
+            setCurrentLocation(newLoc);
+            setJSON(STORAGE_KEY, { address: newLoc.name, ...newLoc }, { ttlMs: LOCATION_TTL_MS });
+          }
+        }
+      }
     } catch {
       // If API fails, keep existing in-memory addresses.
     }
@@ -293,7 +317,7 @@ export const LocationProvider = ({ children }) => {
   useEffect(() => {
     const parsed = getJSON(STORAGE_KEY, null);
     const addressName = parsed?.address || parsed?.name;
-    if (parsed && addressName) {
+    if (parsed && addressName && !addressName.includes("Rajshri Palace")) {
       updateLocation(
         {
           name: addressName,

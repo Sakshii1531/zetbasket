@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useInViewAnimation } from "@/core/hooks/useInViewAnimation";
-import { Sparkles, Heart, Snowflake, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
+import { Sparkles, Heart, Snowflake, ChevronLeft, ChevronRight, MapPin, Loader2 } from "lucide-react";
 
 // MUI Icons (shared with admin & icon selector)
 import HomeIcon from "@mui/icons-material/Home";
