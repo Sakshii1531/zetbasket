@@ -156,4 +156,12 @@ export const customerApi = {
   // Pincode Serviceability
   checkPincodeServiceability: (pincode) =>
     axiosInstance.get("/settings/check-serviceability", { params: { pincode } }),
+
+  // Delivery Partner Rating
+  getDeliveryRatingEligibility: (orderId) =>
+    axiosInstance.get(`/delivery-ratings/eligibility/${encodeURIComponent(String(orderId || "").trim())}`),
+  submitDeliveryRating: (data) =>
+    axiosInstance.post("/delivery-ratings", data),
+  getOrderDeliveryRating: (orderId) =>
+    axiosInstance.get(`/orders/${encodeURIComponent(String(orderId || "").trim())}/delivery-rating`),
 };

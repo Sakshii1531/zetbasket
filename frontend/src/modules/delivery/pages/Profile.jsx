@@ -15,6 +15,7 @@ import {
   IndianRupee,
   ChevronDown,
   ChevronUp,
+  Star,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import Button from "@/shared/components/ui/Button";
@@ -27,12 +28,15 @@ import { useEffect } from 'react';
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const { settings } = useSettings();
   const appName = settings?.appName || "App";
   const [faqs, setFaqs] = useState([]);
 
   useEffect(() => {
+    if (typeof refreshUser === "function") {
+      refreshUser().catch(() => {});
+    }
     const fetchFaqs = async () => {
       try {
         const response = await axiosInstance.get('/public/faqs', { params: { category: 'Delivery', status: 'published' } });
@@ -45,6 +49,13 @@ const Profile = () => {
   }, []);
 
   const menuItems = [
+    {
+      icon: Star,
+      label: "Ratings & Reviews",
+      sub: "Customer feedback & score",
+      color: "text-amber-600 bg-amber-50",
+      path: "/delivery/profile/ratings",
+    },
     {
       icon: User,
       label: "Personal Details",
@@ -180,22 +191,34 @@ const Profile = () => {
           <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider">
             Joined
           </p>
-          <p className="font-bold text-gray-900 text-lg">Jan '24</p>
+          <p className="font-bold text-gray-900 text-sm mt-0.5">
+            {user?.createdAt
+              ? new Date(user.createdAt).toLocaleDateString("en-US", {
+                  month: "short",
+                  year: "2-digit",
+                })
+              : "Jan '24"}
+          </p>
         </div>
         <div className="w-px bg-gray-100"></div>
         <div className="flex-1">
           <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider">
-            Trips
+            Ratings
           </p>
-          <p className="font-bold text-gray-900 text-lg">1,240</p>
+          <p className="font-bold text-gray-900 text-sm mt-0.5">
+            {user?.ratingCount ? `${user.ratingCount} reviews` : "0 reviews"}
+          </p>
         </div>
         <div className="w-px bg-gray-100"></div>
         <div className="flex-1">
           <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider">
             Rating
           </p>
-          <p className="font-bold text-gray-900 text-lg flex justify-center items-center">
-            4.8 <span className="text-yellow-400 text-sm ml-1">★</span>
+          <p className="font-bold text-gray-900 text-sm mt-0.5 flex justify-center items-center gap-0.5">
+            {user?.ratingAverage && user.ratingAverage > 0
+              ? user.ratingAverage.toFixed(1)
+              : "New"}{" "}
+            <Star size={14} className="fill-amber-400 text-amber-400 inline" />
           </p>
         </div>
       </motion.div>

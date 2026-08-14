@@ -49,6 +49,7 @@ const SellerLocations = React.lazy(() => import("../pages/SellerLocations"));
 const ActiveDeliveryBoys = React.lazy(
   () => import("../pages/ActiveDeliveryBoys"),
 );
+const DeliveryRatings = React.lazy(() => import("../pages/DeliveryRatings"));
 const PendingDeliveryBoys = React.lazy(
   () => import("../pages/PendingDeliveryBoys"),
 );
@@ -152,6 +153,7 @@ const navItems = [
     children: [
       { label: "Active Drivers", path: "/admin/delivery-boys/active" },
       { label: "Waiting for Review", path: "/admin/delivery-boys/pending" },
+      { label: "Delivery Ratings", path: "/admin/delivery-ratings" },
       { label: "Track Drivers", path: "/admin/tracking" },
       { label: "Send Money", path: "/admin/delivery-funds" },
     ],
@@ -255,6 +257,7 @@ const AdminRoutes = () => {
         <Route path="/sellers/pending" element={<PendingSellers />} />
         <Route path="/seller-locations" element={<SellerLocations />} />
         <Route path="/delivery-boys/active" element={<ActiveDeliveryBoys />} />
+        <Route path="/delivery-ratings" element={<DeliveryRatings />} />
         <Route
           path="/delivery-boys/pending"
           element={<PendingDeliveryBoys />}

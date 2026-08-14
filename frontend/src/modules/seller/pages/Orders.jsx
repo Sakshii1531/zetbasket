@@ -67,6 +67,31 @@ const Orders = () => {
     const [total, setTotal] = useState(0);
     const hasMountedRef = useRef(false);
 
+    // Prevent background screen scrolling when modals are open
+    useEffect(() => {
+        const isOpen = isDetailsModalOpen || isQuickViewModalOpen;
+        if (!isOpen) return;
+
+        // Store scroll position and lock the page
+        const scrollY = window.scrollY;
+        const scrollX = window.scrollX;
+
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${scrollY}px`;
+        document.body.style.left = `-${scrollX}px`;
+        document.body.style.width = '100%';
+
+        return () => {
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.left = '';
+            document.body.style.width = '';
+            window.scrollTo(scrollX, scrollY);
+        };
+    }, [isDetailsModalOpen, isQuickViewModalOpen]);
+
     // Initial load: show full-page loader once
     useEffect(() => {
         fetchOrders(page, true).finally(() => {
@@ -696,7 +721,7 @@ const Orders = () => {
                     {/* Quick View Summary Modal */}
                     <AnimatePresence>
                         {isQuickViewModalOpen && (
-                            <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4">
+                            <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 overscroll-contain">
                                 <motion.div
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
@@ -708,7 +733,7 @@ const Orders = () => {
                                     initial={{ opacity: 0, scale: 0.95, y: 10 }}
                                     animate={{ opacity: 1, scale: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                                    className="w-full max-w-lg relative z-10 bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+                                    className="w-full max-w-lg relative z-10 bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto overscroll-contain touch-pan-y"
                                 >
                                     <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                                         <div className="flex items-center gap-3 min-w-0">
@@ -756,7 +781,7 @@ const Orders = () => {
                     </AnimatePresence>
                     <AnimatePresence>
                         {isDetailsModalOpen && selectedOrder && (
-                            <div className="fixed inset-0 z-[100] flex items-stretch sm:items-center justify-center p-3 sm:p-6 lg:p-12">
+                            <div className="fixed inset-0 z-[100] flex items-stretch sm:items-center justify-center p-3 sm:p-6 lg:p-12 overscroll-contain">
                                 <motion.div
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
@@ -768,7 +793,7 @@ const Orders = () => {
                                     initial={{ opacity: 0, scale: 0.95, y: 10 }}
                                     animate={{ opacity: 1, scale: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                                    className="w-full max-w-lg sm:max-w-2xl relative z-10 bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+                                    className="w-full max-w-lg sm:max-w-2xl relative z-10 bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] overscroll-contain"
                                 >
                                     {/* Modal Header */}
                                     <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-100">
@@ -802,7 +827,7 @@ const Orders = () => {
                                         </button>
                                     </div>
 
-                                    <div className="px-4 py-4 sm:px-6 sm:py-5 overflow-y-auto scrollbar-hide flex-1">
+                                    <div className="px-4 py-4 sm:px-6 sm:py-5 overflow-y-auto overscroll-contain touch-pan-y scrollbar-hide flex-1">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
                                             <div className="space-y-3 sm:space-y-4">
                                                 <div>
@@ -883,7 +908,7 @@ const Orders = () => {
                                         </div>
 
                                         <h4 className="text-xs font-black text-slate-600 uppercase tracking-widest mb-3 sm:mb-4">Items Ordered ({selectedOrder.items.length})</h4>
-                                        <div className="space-y-3 max-h-52 sm:max-h-64 overflow-y-auto pr-1">
+                                        <div className="space-y-3 max-h-52 sm:max-h-64 overflow-y-auto overscroll-contain touch-pan-y pr-1">
                                             {selectedOrder.items.map((item, idx) => (
                                                 <div key={idx} className="flex items-center justify-between p-3 bg-white ring-1 ring-slate-100 rounded-2xl group hover:shadow-md transition-all">
                                                     <div className="flex items-center gap-4">

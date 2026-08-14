@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import InvoiceModal from "../components/order/InvoiceModal";
 import HelpModal from "../components/order/HelpModal";
+import DeliveryRatingModal from "../components/order/DeliveryRatingModal";
 import LiveTrackingMap from "../components/order/LiveTrackingMap";
 import DeliveryOtpDisplay from "../components/DeliveryOtpDisplay";
 import OrderProgressTracker from "../components/order/OrderProgressTracker";
@@ -27,6 +28,7 @@ import {
   Navigation2,
   Camera,
   X,
+  Star,
 } from "lucide-react";
 import { customerApi } from "../services/customerApi";
 import { toast } from "sonner";
@@ -139,6 +141,9 @@ const OrderDetailPage = () => {
   const { orderId } = useParams();
   const [showInvoice, setShowInvoice] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [ratingEligibility, setRatingEligibility] = useState(null);
+  const [existingRating, setExistingRating] = useState(null);
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [returnDetails, setReturnDetails] = useState(null);
@@ -230,6 +235,32 @@ const OrderDetailPage = () => {
           }
         } catch {
           setReturnDetails(null);
+        }
+
+        // Check delivery partner rating eligibility for delivered orders
+        if (
+          ord &&
+          (String(ord.status || "").toLowerCase() === "delivered" ||
+            String(ord.workflowStatus || "").toUpperCase() === "DELIVERED")
+        ) {
+          try {
+            const lookupId = resolveOrderLookupId(ord);
+            const ratingRes = await customerApi.getDeliveryRatingEligibility(lookupId);
+            const eligibilityData = ratingRes.data?.result || ratingRes.data?.data;
+            if (eligibilityData) {
+              setRatingEligibility(eligibilityData);
+              if (eligibilityData.hasRated) {
+                setExistingRating(eligibilityData.existingRating);
+              } else if (
+                eligibilityData.eligible &&
+                sessionStorage.getItem(`rating_dismissed_${lookupId}`) !== "true"
+              ) {
+                setShowRatingModal(true);
+              }
+            }
+          } catch (ratingErr) {
+            console.error("Failed to check rating eligibility:", ratingErr);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch order details:", error);
@@ -427,6 +458,10 @@ const OrderDetailPage = () => {
   };
 
   const status = order ? getLegacyStatusFromOrder(order) : null;
+  const isDelivered =
+    status === "delivered" ||
+    String(order?.status || "").toLowerCase() === "delivered" ||
+    String(order?.workflowStatus || "").toUpperCase() === "DELIVERED";
   const isAwaitingOnlinePayment =
     Boolean(order) &&
     order.paymentMode === "ONLINE" &&
@@ -835,7 +870,7 @@ const OrderDetailPage = () => {
         )}
 
         {/* Delivery Partner Card - Redesigned */}
-        {(order.deliveryBoy || (status !== "delivered" && status !== "cancelled" && status !== "pending")) && (
+        {(order.deliveryBoy || (!isDelivered && status !== "cancelled" && status !== "pending")) && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -847,7 +882,10 @@ const OrderDetailPage = () => {
                 <div className="h-14 w-14 rounded-full bg-white/20 backdrop-blur-sm overflow-hidden border-2 border-white/40 shadow-lg flex items-center justify-center">
                   {order.deliveryBoy ? (
                     <img
-                      src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=100&auto=format&fit=crop&q=60"
+                      src={
+                        order.deliveryBoy.profileImage ||
+                        "https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=100&auto=format&fit=crop&q=60"
+                      }
                       alt="Rider"
                       className="h-full w-full object-cover"
                     />
@@ -857,7 +895,9 @@ const OrderDetailPage = () => {
                 </div>
                 {order.deliveryBoy && (
                   <div className="absolute -bottom-1 -right-1 bg-white text-primary text-[9px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shadow-md">
-                    4.8 ★
+                    {order.deliveryBoy.ratingAverage && order.deliveryBoy.ratingAverage > 0
+                      ? `${order.deliveryBoy.ratingAverage.toFixed(1)} ★`
+                      : "New ★"}
                   </div>
                 )}
               </div>
@@ -866,7 +906,7 @@ const OrderDetailPage = () => {
                 <h3 className="font-bold text-primary-foreground text-lg">{order.deliveryBoy?.name || "Assigning Partner..."}</h3>
                 <p className="text-xs text-primary-foreground/90 mt-0.5">
                   {order.deliveryBoy 
-                    ? (status === "delivered" ? "Order Delivered" : "On the way to you") 
+                    ? (isDelivered ? "Order Delivered" : "On the way to you") 
                     : "Searching for nearby rider"}
                 </p>
               </div>
@@ -887,6 +927,47 @@ const OrderDetailPage = () => {
                 )}
               </div>
             </div>
+
+            {/* Delivery Partner Rating Section */}
+            {isDelivered && (
+              <div className="mt-4 pt-3 border-t border-white/20">
+                {existingRating ? (
+                  <div className="p-3 bg-white/15 rounded-2xl backdrop-blur-sm border border-white/25">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-white/80">Your Delivery Rating</span>
+                      <div className="flex items-center gap-1 text-xs font-black text-amber-300">
+                        <span>{existingRating.rating}</span>
+                        <Star size={14} className="fill-amber-300 text-amber-300" />
+                      </div>
+                    </div>
+                    {existingRating.feedbackTags?.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {existingRating.feedbackTags.map((tag) => (
+                          <span key={tag} className="px-2.5 py-0.5 bg-white/20 text-white rounded-full text-[9px] font-bold">
+                            {tag.replace(/_/g, " ")}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {existingRating.comment && (
+                      <p className="text-xs text-white/90 italic mt-1.5 font-medium">"{existingRating.comment}"</p>
+                    )}
+                  </div>
+                ) : ratingEligibility?.eligible !== false ? (
+                  <button
+                    onClick={() => setShowRatingModal(true)}
+                    className="w-full py-3 bg-white text-primary rounded-2xl text-xs font-black uppercase tracking-wider shadow-md hover:bg-slate-50 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                  >
+                    <Star size={16} className="fill-amber-400 text-amber-400" />
+                    Rate Delivery Partner
+                  </button>
+                ) : ratingEligibility?.reason === "RATING_WINDOW_EXPIRED" ? (
+                  <p className="text-[10px] text-white/70 font-semibold text-center py-1">
+                    Rating period expired (7 days post-delivery)
+                  </p>
+                ) : null}
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -1391,6 +1472,19 @@ const OrderDetailPage = () => {
           </motion.div>
         </div>
       )}
+
+      {/* Delivery Partner Rating Modal */}
+      <DeliveryRatingModal
+        isOpen={showRatingModal}
+        onClose={() => setShowRatingModal(false)}
+        orderId={resolveOrderLookupId(order)}
+        partnerName={order?.deliveryBoy?.name || "Delivery Partner"}
+        partnerImage={order?.deliveryBoy?.profileImage}
+        onSuccess={(ratingData) => {
+          setExistingRating(ratingData);
+          setRatingEligibility({ eligible: false, hasRated: true });
+        }}
+      />
     </div>
   );
 };

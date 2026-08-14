@@ -123,6 +123,27 @@ const deliverySchema = new mongoose.Schema(
         lastLocationAt: {
             type: Date,
         },
+
+        // Delivery Partner Rating Aggregates
+        ratingAverage: {
+            type: Number,
+            default: 0,
+        },
+        ratingCount: {
+            type: Number,
+            default: 0,
+        },
+        ratingSum: {
+            type: Number,
+            default: 0,
+        },
+        ratingDistribution: {
+            1: { type: Number, default: 0 },
+            2: { type: Number, default: 0 },
+            3: { type: Number, default: 0 },
+            4: { type: Number, default: 0 },
+            5: { type: Number, default: 0 },
+        },
     },
     {
         timestamps: true,

@@ -107,7 +107,7 @@ const OrdersList = () => {
                     customer: o.customer?.name || 'Unknown',
                     seller: o.seller?.shopName || 'Unknown',
                     items: o.items?.length || 0,
-                    amount: o.pricing?.total || 0,
+                    amount: Math.ceil(o.pricing?.total || o.total || 0),
                     status: getLegacyStatusFromOrder(o),
                     workflowStatus: o.workflowStatus,
                     workflowVersion: o.workflowVersion,
@@ -484,7 +484,7 @@ const OrdersList = () => {
                                     </td>
                                     <td className="px-4 py-5 text-right">
                                         <div className="flex flex-col items-end">
-                                            <span className="text-sm font-black text-slate-900">₹{order.amount.toLocaleString()}</span>
+                                            <span className="text-sm font-black text-slate-900">₹{Math.ceil(order.amount || 0).toLocaleString('en-IN')}</span>
                                             <span className="text-[10px] font-bold text-slate-400 mt-0.5">{order.payment}</span>
                                         </div>
                                     </td>

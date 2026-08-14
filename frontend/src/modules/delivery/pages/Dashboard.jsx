@@ -136,9 +136,11 @@ const Dashboard = () => {
               {user?.name || "Delivery Partner"}
             </h2>
             <div className="flex items-center text-sm font-medium">
-              <span className="flex items-center bg-yellow-50 text-yellow-600 px-1.5 py-0.5 rounded border border-yellow-100">
-                <Star size={12} fill="currentColor" className="mr-1" />
-                4.8
+              <span className="flex items-center bg-yellow-50 text-yellow-600 px-1.5 py-0.5 rounded border border-yellow-100 font-bold">
+                <Star size={12} fill="currentColor" className="mr-1 text-amber-400" />
+                {user?.ratingAverage && user.ratingAverage > 0
+                  ? user.ratingAverage.toFixed(1)
+                  : "New ★"}
               </span>
               <span className="text-gray-300 mx-2">•</span>
               <span className="ds-caption text-gray-500">ID: {(user?._id || user?.id || "N/A").slice(-6).toUpperCase()}</span>

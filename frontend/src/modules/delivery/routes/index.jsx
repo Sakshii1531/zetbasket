@@ -21,6 +21,7 @@ import Settings from "../pages/profile/Settings";
 import HelpSupport from "../pages/profile/HelpSupport";
 import Withdrawals from "../pages/profile/Withdrawals";
 import Notifications from "../pages/Notifications";
+import DeliveryRatingsPage from "../pages/DeliveryRatingsPage";
 
 const DeliveryRoutes = () => {
   useEffect(() => {
@@ -41,6 +42,7 @@ const DeliveryRoutes = () => {
         <Route path="cod-cash" element={<CodCash />} />
         <Route path="history" element={<OrderHistory />} />
         <Route path="profile" element={<Profile />} />
+        <Route path="profile/ratings" element={<DeliveryRatingsPage />} />
         <Route path="profile/personal-details" element={<PersonalDetails />} />
         <Route path="profile/vehicle-info" element={<VehicleInfo />} />
         <Route path="profile/bank-account" element={<BankAccount />} />

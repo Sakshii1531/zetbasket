@@ -470,7 +470,12 @@ const Dashboard = () => {
                     <span className="text-sm text-slate-600">{new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
                   </td>
                   <td className="py-4 px-4 align-middle">
-                    <span className="text-sm font-semibold text-slate-900">₹{order.pricing?.total || 0}</span>
+                    <span className="text-sm font-semibold text-slate-900">
+                      ₹{(() => {
+                        const val = Number(order.pricing?.total ?? order.total ?? 0);
+                        return val % 1 === 0 ? val.toLocaleString('en-IN') : val.toFixed(2);
+                      })()}
+                    </span>
                   </td>
                   <td className="py-4 px-4 align-middle">
                     <Badge variant={getStatusColor(order.status)} className="capitalize">

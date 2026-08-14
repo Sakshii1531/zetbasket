@@ -26,9 +26,12 @@ function randomBase32(length) {
   return out;
 }
 
+export function buildSortableToken(timestampMs = Date.now()) {
+  return `${encodeTimePart(timestampMs)}${randomBase32(RANDOM_PART_LENGTH)}`;
+}
+
 export function buildPublicOrderId() {
-  // Generate clean 8-character unique Base32 string (e.g. ORD-9K4M7N2P)
-  return `ORD-${randomBase32(8)}`;
+  return `ORD-${buildSortableToken()}`;
 }
 
 export function buildCheckoutGroupId() {

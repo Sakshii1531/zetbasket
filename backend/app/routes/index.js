@@ -22,6 +22,7 @@ import mediaRoute from "./mediaRoutes.js";
 import healthRoute from "./healthRoutes.js";
 import metricsRoute from "./metricsRoutes.js";
 import authOtpRoute from "../modules/otp/otp.routes.js";
+import deliveryRatingRoute from "./deliveryRatingRoutes.js";
 
 import express from "express";
 
@@ -50,6 +51,7 @@ const setupRoutes = (app) => {
     router.use("/payments", paymentRoute);
     router.use("/maps", mapsRoute);
     router.use("/media", mediaRoute);
+    router.use("/", deliveryRatingRoute);
     // experienceRoute, offerRoute, couponRoute are mounted at "/" intentionally:
     // each of these routers declares ABSOLUTE paths internally (e.g.
     //   router.get("/experience", ...), router.get("/offers", ...),

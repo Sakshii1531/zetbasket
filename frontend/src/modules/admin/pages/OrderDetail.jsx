@@ -521,9 +521,9 @@ const OrderDetail = () => {
                             const subtotal = Math.ceil(order.productSubtotal || order.pricing?.subtotal || order.items.reduce((s, i) => s + (i.price * i.quantity), 0));
                             const commission = Math.ceil(order.adminCommission ?? (subtotal * 0.10));
                             const sellerPayout = Math.ceil(order.sellerPayout ?? (subtotal - commission));
-                            const deliveryFee = Math.ceil(order.pricing?.deliveryFee || order.deliveryFee || 0);
+                            const deliveryFee = Math.ceil(order.paymentBreakdown?.deliveryFeeCharged || order.pricing?.deliveryFee || order.deliveryFee || 0);
                             const tax = Math.ceil(order.paymentBreakdown?.taxTotal || order.pricing?.gst || order.pricing?.tax || order.tax || 0);
-                            const handlingFee = Math.ceil(order.pricing?.handlingFee || order.handlingFee || 0);
+                            const handlingFee = Math.ceil(order.paymentBreakdown?.handlingFeeCharged || order.pricing?.handlingFee || order.pricing?.platformFee || order.handlingFee || 0);
                             const total = Math.ceil(order.pricing?.total || order.total || (subtotal + deliveryFee + tax + handlingFee));
 
                             const totalAdminEarning = commission + tax + handlingFee;
@@ -539,7 +539,7 @@ const OrderDetail = () => {
                                         <div className="flex justify-between items-center">
                                             <div>
                                                 <span className="font-black uppercase text-[10px] block text-emerald-400">Total Admin Retained Inflow</span>
-                                                <span className="text-[9px] text-emerald-300/90 font-medium">Commission (₹{commission}) + Tax/GST (₹{tax}) {handlingFee > 0 ? `+ Handling (₹${handlingFee})` : ''}</span>
+                                                <span className="text-[9px] text-emerald-300/90 font-medium">Commission (₹{commission}) + Tax/GST (₹{tax}) + Handling (₹{handlingFee})</span>
                                             </div>
                                             <span className="text-base font-black text-emerald-400">+ ₹{totalAdminEarning}</span>
                                         </div>
@@ -558,12 +558,10 @@ const OrderDetail = () => {
                                         <span className="font-black text-sky-400 text-sm">₹{deliveryFee}</span>
                                     </div>
 
-                                    {handlingFee > 0 && (
-                                        <div className="flex justify-between items-center">
-                                            <span className="font-semibold text-slate-300">Handling Fee</span>
-                                            <span className="font-black text-slate-200 text-sm">₹{handlingFee}</span>
-                                        </div>
-                                    )}
+                                    <div className="flex justify-between items-center">
+                                        <span className="font-semibold text-slate-300">Handling Fee</span>
+                                        <span className="font-black text-slate-200 text-sm">₹{handlingFee}</span>
+                                    </div>
 
                                     <div className="h-px bg-slate-800 my-3" />
 
