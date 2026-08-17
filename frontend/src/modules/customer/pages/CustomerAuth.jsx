@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@core/context/AuthContext';
@@ -66,7 +66,10 @@ const CATEGORIES = [
 ];
 
 const CustomerAuth = () => {
-    const [isLogin, setIsLogin] = useState(true);
+    const [isLogin, setIsLogin] = useState(() => {
+        const saved = sessionStorage.getItem('customer_auth_is_login');
+        return saved !== null ? JSON.parse(saved) : true;
+    });
     const [isLoading, setIsLoading] = useState(false);
     const [showOtp, setShowOtp] = useState(false);
     const [timer, setTimer] = useState(0);
@@ -76,12 +79,34 @@ const CustomerAuth = () => {
     const appName = settings?.appName || 'App';
     const logoUrl = settings?.logoUrl || '';
     const navigate = useNavigate();
+    const scrollableRef = useRef(null);
 
-    const [formData, setFormData] = useState({
-        phone: '',
-        otp: '',
-        name: ''
+    const [formData, setFormData] = useState(() => {
+        const saved = sessionStorage.getItem('customer_auth_form_data');
+        return saved ? JSON.parse(saved) : { phone: '', otp: '', name: '' };
     });
+
+    useEffect(() => {
+        sessionStorage.setItem('customer_auth_is_login', JSON.stringify(isLogin));
+    }, [isLogin]);
+
+    useEffect(() => {
+        sessionStorage.setItem('customer_auth_form_data', JSON.stringify(formData));
+    }, [formData]);
+
+    // Scroll focused input into view within the card when keyboard opens
+    useEffect(() => {
+        const handleFocus = (e) => {
+            const el = e.target;
+            if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && scrollableRef.current) {
+                setTimeout(() => {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 450);
+            }
+        };
+        window.addEventListener('focusin', handleFocus);
+        return () => window.removeEventListener('focusin', handleFocus);
+    }, []);
 
     const activeCategory = CATEGORIES[carouselIndex];
 
@@ -133,6 +158,8 @@ const CustomerAuth = () => {
         try {
             const response = await customerApi.verifyOtp({ phone: formData.phone, otp: formData.otp });
             const { token, customer } = response.data.result;
+            sessionStorage.removeItem('customer_auth_is_login');
+            sessionStorage.removeItem('customer_auth_form_data');
             login({ ...customer, token, role: 'customer' });
             toast.success('Successfully Logged In!');
             navigate('/');
@@ -194,10 +221,10 @@ const CustomerAuth = () => {
             </div>
 
             {/* Premium Centered Card Container */}
-            <div className="w-[92%] max-w-[400px] h-[85vh] max-h-[780px] bg-white relative z-10 overflow-hidden rounded-[40px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] border border-white/40 flex flex-col transition-colors duration-1000">
+            <div className="w-[92%] max-w-[400px] max-h-[85vh] bg-white relative z-10 overflow-hidden rounded-[40px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] border border-white/40 flex flex-col transition-colors duration-1000">
 
                 {/* Scrollable Content Container */}
-                <div className="h-full overflow-y-auto no-scrollbar pb-20">
+                <div ref={scrollableRef} className="flex-1 overflow-y-auto no-scrollbar pb-20">
 
                     {/* Header: Immersive Category Visuals */}
                     <motion.div
@@ -344,8 +371,6 @@ const CustomerAuth = () => {
                                                     onChange={(e) => setFormData({ ...formData, name: e.target.value.replace(/[^a-zA-Z\s]/g, '') })}
                                                     onFocus={(e) => {
                                                         e.target.style.borderColor = activeCategory.theme;
-                                                        const target = e.target;
-                                                        setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
                                                     }}
                                                     onBlur={(e) => e.target.style.borderColor = '#F3F4F6'}
                                                 />
@@ -372,8 +397,6 @@ const CustomerAuth = () => {
                                                 onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })}
                                                 onFocus={(e) => {
                                                     e.target.style.borderColor = activeCategory.theme;
-                                                    const target = e.target;
-                                                    setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
                                                 }}
                                                 onBlur={(e) => e.target.style.borderColor = '#F3F4F6'}
                                             />
@@ -396,21 +419,25 @@ const CustomerAuth = () => {
                                             By continuing, you agree to our
                                         </p>
                                         <div className="flex items-center gap-1.5 underline decoration-gray-200 underline-offset-4">
-                                            <button 
-                                                onClick={() => navigate('/terms')}
+                                            <a 
+                                                href="/terms"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
                                                 className="text-[10px] font-black uppercase tracking-widest hover:text-gray-900 transition-colors"
                                                 style={{ color: activeCategory.theme }}
                                             >
                                                 Terms & Condition
-                                            </button>
+                                            </a>
                                             <span className="text-[8px] text-gray-300">•</span>
-                                            <button 
-                                                onClick={() => navigate('/privacy')}
+                                            <a 
+                                                href="/privacy"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
                                                 className="text-[10px] font-black uppercase tracking-widest hover:text-gray-900 transition-colors"
                                                 style={{ color: activeCategory.theme }}
                                             >
                                                 Privacy Policy
-                                            </button>
+                                            </a>
                                         </div>
                                     </div>
                                 </motion.div>
@@ -458,8 +485,6 @@ const CustomerAuth = () => {
                                                     }}
                                                     onFocus={(e) => {
                                                         e.target.style.borderColor = activeCategory.theme;
-                                                        const target = e.target;
-                                                        setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
                                                     }}
                                                     onBlur={(e) => e.target.style.borderColor = ''}
                                                 />

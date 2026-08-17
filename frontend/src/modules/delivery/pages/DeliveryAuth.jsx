@@ -111,7 +111,7 @@ const DeliveryAuth = () => {
       ) {
         setTimeout(() => {
           target.scrollIntoView({ behavior: "smooth", block: "center" });
-        }, 300);
+        }, 450);
       }
     };
     window.addEventListener("focusin", handleFocusIn);
@@ -375,7 +375,7 @@ const DeliveryAuth = () => {
   };
 
   return (
-    <div className="min-h-screen min-h-dvh bg-[#F0F4FF] flex flex-col items-center justify-center p-4 sm:p-5 py-6 sm:py-10 font-['Outfit',_sans-serif] overflow-y-auto" data-lenis-prevent>
+    <div className="min-h-screen min-h-dvh bg-[#F0F4FF] flex flex-col items-center justify-start py-8 sm:py-10 px-4 sm:p-5 font-['Outfit',_sans-serif] overflow-y-auto" data-lenis-prevent>
       {/* Background blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-32 -left-32 w-80 h-80 bg-brand-200/40 rounded-full blur-3xl" />
