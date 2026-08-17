@@ -3,7 +3,18 @@ import { customerApi } from "../services/customerApi";
 import { useAuth } from "../../../core/context/AuthContext";
 import { getJSON, setJSON, remove as removeStorage, STORAGE_KEYS } from "@core/utils/storage";
 
-const WishlistContext = createContext();
+const defaultWishlistContext = {
+  wishlist: [],
+  addToWishlist: () => {},
+  toggleWishlist: () => {},
+  removeFromWishlist: () => {},
+  isInWishlist: () => false,
+  fetchFullWishlist: () => {},
+  isFullDataFetched: false,
+  loading: false,
+};
+
+const WishlistContext = createContext(defaultWishlistContext);
 
 const loadGuestWishlist = () => {
   const parsed = getJSON(STORAGE_KEYS.WISHLIST, []);
@@ -14,7 +25,13 @@ const loadGuestWishlist = () => {
   return parsed;
 };
 
-export const useWishlist = () => useContext(WishlistContext);
+export const useWishlist = () => {
+  const context = useContext(WishlistContext);
+  if (!context) {
+    return defaultWishlistContext;
+  }
+  return context;
+};
 
 export const WishlistProvider = ({ children }) => {
   const { isAuthenticated } = useAuth();

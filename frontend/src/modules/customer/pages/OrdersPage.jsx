@@ -4,11 +4,14 @@ import { Package, ChevronRight, Clock, CheckCircle, Loader2, ChevronLeft } from 
 import { customerApi } from '../services/customerApi';
 import { getOrderStatusLabel, getLegacyStatusFromOrder } from '@/shared/utils/orderStatus';
 import { applyCloudinaryTransform } from '@/core/utils/imageUtils';
+import ProductRatingModal from '../components/order/ProductRatingModal';
 
 const OrdersPage = () => {
     const navigate = useNavigate();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
+    const [selectedRatingOrderId, setSelectedRatingOrderId] = useState(null);
 
     useEffect(() => {
         const fetchOrders = async () => {
@@ -145,10 +148,24 @@ const OrdersPage = () => {
                                 <div className="text-[11px] text-slate-500 font-medium truncate flex-1 min-w-0">
                                     {order.items.map((i) => i.name).join(', ')}
                                 </div>
-                                <div className="flex items-center gap-1.5 shrink-0">
+                                <div className="flex items-center gap-2 shrink-0">
+                                    {legacy === 'delivered' && (
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                setSelectedRatingOrderId(order._id || order.orderId);
+                                                setIsRatingModalOpen(true);
+                                            }}
+                                            className="px-3 py-1 bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 rounded-full text-[11px] font-bold flex items-center gap-1 transition-colors shadow-xs"
+                                        >
+                                            ⭐ Rate Products
+                                        </button>
+                                    )}
                                     <span className="text-[11px] font-medium text-slate-400">Total</span>
                                     <span className="text-sm font-semibold text-slate-900">
-                                    ₹{order.pricing.total}
+                                    ₹{Math.ceil(Number(order.pricing?.total || order.total || 0))}
                                     </span>
                                     <ChevronRight size={16} className="text-slate-300" />
                                 </div>
@@ -158,6 +175,16 @@ const OrdersPage = () => {
                     })
                 )}
             </div>
+
+            {/* Product Rating Modal */}
+            <ProductRatingModal
+                isOpen={isRatingModalOpen}
+                onClose={() => {
+                    setIsRatingModalOpen(false);
+                    setSelectedRatingOrderId(null);
+                }}
+                orderId={selectedRatingOrderId}
+            />
         </div>
     );
 };

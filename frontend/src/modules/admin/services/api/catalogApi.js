@@ -27,6 +27,12 @@ export const adminCatalogApi = {
     updateProduct: (id, formData) =>
         axiosInstance.put(`/products/${id}`, formData),
     deleteProduct: (id) => axiosInstance.delete(`/products/${id}`),
+
+    // Product Rating & Review Moderation
+    getAdminProductRatings: (params) =>
+        axiosInstance.get('/product-ratings/admin', { params }),
+    updateProductRatingStatus: (id, data) =>
+        axiosInstance.patch(`/product-ratings/admin/${id}/status`, data),
 };
 
 export default adminCatalogApi;

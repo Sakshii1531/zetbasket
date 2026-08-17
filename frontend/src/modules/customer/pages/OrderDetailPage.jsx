@@ -252,10 +252,13 @@ const OrderDetailPage = () => {
             if (eligibilityData) {
               setRatingEligibility(eligibilityData);
               if (eligibilityData.hasRated) {
-                setExistingRating(eligibilityData.existingRating);
+                setExistingRating(eligibilityData.existingRating || { hasRated: true });
+                sessionStorage.setItem(`rating_dismissed_${lookupId}`, "true");
+                sessionStorage.setItem(`rating_completed_${lookupId}`, "true");
               } else if (
                 eligibilityData.eligible &&
-                sessionStorage.getItem(`rating_dismissed_${lookupId}`) !== "true"
+                sessionStorage.getItem(`rating_dismissed_${lookupId}`) !== "true" &&
+                sessionStorage.getItem(`rating_completed_${lookupId}`) !== "true"
               ) {
                 setShowRatingModal(true);
               }
@@ -883,14 +886,17 @@ const OrderDetailPage = () => {
               <div className="relative">
                 <div className="h-14 w-14 rounded-full bg-white/20 backdrop-blur-sm overflow-hidden border-2 border-white/40 shadow-lg flex items-center justify-center">
                   {order.deliveryBoy ? (
-                    <img
-                      src={
-                        order.deliveryBoy.profileImage ||
-                        "https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=100&auto=format&fit=crop&q=60"
-                      }
-                      alt="Rider"
-                      className="h-full w-full object-cover"
-                    />
+                    (order.deliveryBoy.profileImage || order.deliveryBoy.documents?.profileImage) ? (
+                      <img
+                        src={applyCloudinaryTransform(order.deliveryBoy.profileImage || order.deliveryBoy.documents?.profileImage)}
+                        alt="Rider"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center font-black text-xl text-white bg-primary-dark/40">
+                        {order.deliveryBoy.name ? order.deliveryBoy.name.charAt(0).toUpperCase() : <User size={24} className="text-white" />}
+                      </div>
+                    )
                   ) : (
                     <User size={24} className="text-white" />
                   )}
@@ -1086,6 +1092,33 @@ const OrderDetailPage = () => {
               const returnEligible = item.returnEligible;
               const remainingDays = item.remainingReturnDays;
 
+              const isRawSku = (val) => {
+                if (!val || typeof val !== 'string') return true;
+                const s = val.trim();
+                return /^[a-zA-Z0-9_-]+-\d+$/i.test(s) || /^sku-/i.test(s);
+              };
+
+              const rawSku = String(item.variantSku || item.variantSlot || '').trim();
+              const matchedVariant = Array.isArray(item.product?.variants) && rawSku
+                ? item.product.variants.find(v => String(v.sku || '').trim() === rawSku || String(v._id || '').trim() === rawSku)
+                : null;
+
+              const candidateName =
+                (item.variantName && !isRawSku(item.variantName) ? item.variantName : null) ||
+                matchedVariant?.name ||
+                item.unit ||
+                item.product?.unit ||
+                item.weight ||
+                item.product?.weight ||
+                item.pack ||
+                item.product?.pack ||
+                (item.variantSlot && !isRawSku(item.variantSlot) ? item.variantSlot : null) ||
+                (item.variantText && !isRawSku(item.variantText) ? item.variantText : null) ||
+                (typeof item.variant === 'string' && !isRawSku(item.variant) ? item.variant : item.variant?.name || item.variant?.title) ||
+                (typeof item.selectedVariant === 'string' && !isRawSku(item.selectedVariant) ? item.selectedVariant : item.selectedVariant?.name || item.selectedVariant?.title);
+
+              const variantName = candidateName && !isRawSku(candidateName) ? candidateName : (matchedVariant?.name || item.product?.unit || null);
+
               return (
                 <div
                   key={idx}
@@ -1103,8 +1136,14 @@ const OrderDetailPage = () => {
                       <h4 className="font-semibold text-slate-800 text-sm mb-0.5 truncate">
                         {item.name}
                       </h4>
-                      <p className="text-slate-500 text-xs font-medium">
-                        Qty: {item.quantity}
+                      <p className="text-slate-500 text-xs font-medium flex items-center gap-1.5 flex-wrap">
+                        <span>Qty: {item.quantity}</span>
+                        {variantName && (
+                          <>
+                            <span className="text-slate-300">•</span>
+                            <span className="text-emerald-700 font-semibold">{variantName}</span>
+                          </>
+                        )}
                       </p>
                     </div>
                     <div className="text-right flex-shrink-0">
@@ -1245,6 +1284,33 @@ const OrderDetailPage = () => {
             <HelpCircle size={18} /> Help
           </button>
         </motion.div>
+
+        {/* Product Feedback Section */}
+        {getLegacyStatusFromOrder(order) === "delivered" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.38 }}
+            className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-black text-slate-800 flex items-center gap-2">
+                  <Star size={18} className="text-amber-500 fill-amber-400" />
+                  Product Feedback
+                </h3>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">Rate the freshness & quality of delivered items</p>
+              </div>
+              <button
+                onClick={() => setShowProductRatingModal(true)}
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5"
+              >
+                <Star size={14} fill="currentColor" />
+                Rate Products
+              </button>
+            </div>
+          </motion.div>
+        )}
 
         {/* Return Section - Only if applicable */}
         {order?.status !== "cancelled" && (canRequestReturn() || (returnDetails && returnDetails.returnStatus && returnDetails.returnStatus !== "none")) && (

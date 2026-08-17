@@ -142,7 +142,7 @@ const SearchPage = () => {
                         price: p.salePrice || p.price,
                         originalPrice: p.price,
                         weight: p.weight || '1 unit',
-                        deliveryTime: '8-15 mins'
+                        deliveryTime: p.deliveryTime || null
                     }));
                     setAllProducts(formattedProds);
                 }

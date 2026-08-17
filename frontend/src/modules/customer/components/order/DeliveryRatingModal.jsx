@@ -79,14 +79,35 @@ const DeliveryRatingModal = ({
 
       if (response.data?.success) {
         setIsSubmitted(true);
+        if (orderId) {
+          sessionStorage.setItem(`rating_dismissed_${orderId}`, "true");
+          sessionStorage.setItem(`rating_completed_${orderId}`, "true");
+        }
         toast.success("Thank you! Rating submitted successfully ⭐");
         setTimeout(() => {
-          if (onSuccess) onSuccess(response.data.data?.rating);
+          if (onSuccess) onSuccess(response.data.data?.rating || { hasRated: true });
           onClose();
         }, 1800);
       }
     } catch (err) {
       console.error("Submit Delivery Rating Error:", err);
+      const isAlreadySubmitted =
+        err.response?.status === 409 ||
+        err.response?.data?.message?.toLowerCase()?.includes("already");
+
+      if (isAlreadySubmitted) {
+        if (orderId) {
+          sessionStorage.setItem(`rating_dismissed_${orderId}`, "true");
+          sessionStorage.setItem(`rating_completed_${orderId}`, "true");
+        }
+        toast.info("Rating already submitted for this order.");
+        if (onSuccess) {
+          onSuccess({ hasRated: true });
+        }
+        onClose();
+        return;
+      }
+
       const msg =
         err.response?.data?.message ||
         err.response?.data?.error ||

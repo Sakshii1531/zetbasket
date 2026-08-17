@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   X,
   Printer,
@@ -15,6 +16,20 @@ const InvoiceModal = ({ isOpen, onClose, order }) => {
   const { settings } = useSettings();
   const appName = settings?.appName || "Zetbasket";
   const primaryColor = settings?.primaryColor || "var(--primary)";
+
+  useEffect(() => {
+    if (isOpen) {
+      window.lenis?.stop();
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+
+      return () => {
+        window.lenis?.start();
+        document.body.style.overflow = "";
+        document.documentElement.style.overflow = "";
+      };
+    }
+  }, [isOpen]);
 
   if (!order) return null;
 
@@ -117,10 +132,13 @@ const InvoiceModal = ({ isOpen, onClose, order }) => {
         order.paymentMode === "ONLINE" ||
         order.status === "delivered"));
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-md">
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-md"
+          onClick={onClose}
+        >
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -240,10 +258,43 @@ const InvoiceModal = ({ isOpen, onClose, order }) => {
                       const qty = Number(item.quantity || item.qty || 1);
                       const unitPrice = Math.ceil(Number(item.price || 0));
                       const itemTotal = Math.ceil(unitPrice * qty);
+                      
+                      const isRawSku = (val) => {
+                        if (!val || typeof val !== 'string') return true;
+                        const s = val.trim();
+                        return /^[a-zA-Z0-9_-]+-\d+$/i.test(s) || /^sku-/i.test(s);
+                      };
+
+                      const rawSku = String(item.variantSku || item.variantSlot || '').trim();
+                      const matchedVariant = Array.isArray(item.product?.variants) && rawSku
+                        ? item.product.variants.find(v => String(v.sku || '').trim() === rawSku || String(v._id || '').trim() === rawSku)
+                        : null;
+
+                      const candidateName =
+                        (item.variantName && !isRawSku(item.variantName) ? item.variantName : null) ||
+                        matchedVariant?.name ||
+                        item.unit ||
+                        item.product?.unit ||
+                        item.weight ||
+                        item.product?.weight ||
+                        item.pack ||
+                        item.product?.pack ||
+                        (item.variantSlot && !isRawSku(item.variantSlot) ? item.variantSlot : null) ||
+                        (item.variantText && !isRawSku(item.variantText) ? item.variantText : null) ||
+                        (typeof item.variant === 'string' && !isRawSku(item.variant) ? item.variant : item.variant?.name || item.variant?.title) ||
+                        (typeof item.selectedVariant === 'string' && !isRawSku(item.selectedVariant) ? item.selectedVariant : item.selectedVariant?.name || item.selectedVariant?.title);
+
+                      const variantName = candidateName && !isRawSku(candidateName) ? candidateName : (matchedVariant?.name || item.product?.unit || null);
+
                       return (
                         <tr key={idx} className="hover:bg-slate-50/50">
                           <td className="px-3 py-2 text-slate-800 font-bold">
-                            {item.name || item.product?.name || "Product"}
+                            <div>{item.name || item.product?.name || "Product"}</div>
+                            {variantName && (
+                              <div className="text-[10px] font-medium text-emerald-700 mt-0.5">
+                                Variant: {variantName}
+                              </div>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-slate-600 text-center font-mono">
                             {qty}
@@ -365,31 +416,55 @@ const InvoiceModal = ({ isOpen, onClose, order }) => {
               {`
                 @media print {
                   @page {
-                    margin: 10mm;
-                    size: auto;
+                    margin: 0;
+                    size: portrait;
                   }
-                  body {
-                    background: #ffffff !important;
+                  #root {
+                    display: none !important;
+                  }
+                  html, body {
+                    width: 100% !important;
+                    height: auto !important;
+                    min-height: 0 !important;
                     margin: 0 !important;
                     padding: 0 !important;
+                    background: #ffffff !important;
+                    overflow: visible !important;
                   }
-                  body * {
-                    visibility: hidden !important;
+                  .fixed,
+                  [class*="backdrop-blur"],
+                  [class*="max-h-"],
+                  motion.div {
+                    position: static !important;
+                    display: block !important;
+                    transform: none !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    width: 100% !important;
+                    max-width: none !important;
+                    height: auto !important;
+                    min-height: 0 !important;
+                    max-height: none !important;
+                    overflow: visible !important;
+                    box-shadow: none !important;
+                    border: none !important;
+                    background: transparent !important;
                   }
                   #printable-invoice, #printable-invoice * {
                     visibility: visible !important;
                   }
                   #printable-invoice {
-                    position: fixed !important;
-                    left: 0 !important;
-                    top: 0 !important;
+                    display: block !important;
+                    position: static !important;
                     width: 100% !important;
+                    max-width: 100% !important;
+                    height: auto !important;
+                    max-height: none !important;
                     margin: 0 !important;
-                    padding: 0 !important;
+                    padding: 10mm 12mm !important;
                     background: #ffffff !important;
                     box-shadow: none !important;
                     border: none !important;
-                    z-index: 999999 !important;
                     overflow: visible !important;
                     -webkit-print-color-adjust: exact !important;
                     print-color-adjust: exact !important;
@@ -403,7 +478,8 @@ const InvoiceModal = ({ isOpen, onClose, order }) => {
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 

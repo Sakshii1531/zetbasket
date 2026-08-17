@@ -7,6 +7,7 @@ import { useWishlist } from "../../context/WishlistContext";
 import { useCart } from "../../context/CartContext";
 import { useToast } from "@shared/components/ui/Toast";
 import { useCartAnimation } from "../../context/CartAnimationContext";
+import { useLocation as useAppLocation } from "../../context/LocationContext";
 import { applyCloudinaryTransform } from "@/core/utils/imageUtils";
 
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,6 +22,7 @@ const ProductCard = React.memo(
     const { cart, addToCart, updateQuantity, removeFromCart } = useCart();
     const { showToast } = useToast();
     const { animateAddToCart, animateRemoveFromCart } = useCartAnimation();
+    const { currentLocation } = useAppLocation();
 
     const { openProduct } = useProductDetail();
     const [showHeartPopup, setShowHeartPopup] = React.useState(false);
@@ -115,10 +117,54 @@ const ProductCard = React.memo(
       [isWishlisted, toggleWishlistGlobal, product, showToast],
     );
 
+    const isOutOfStock = React.useMemo(() => {
+      if (!product) return false;
+      if (product.status === "out_of_stock" || product.status === "OUT_OF_STOCK") return true;
+      if (product.inStock === false || product.isOutOfStock === true) return true;
+
+      const variants = Array.isArray(product?.variants) ? product.variants : [];
+      if (variants.length > 0) {
+        const rawVariant =
+          variants.find(
+            (v) =>
+              String(v?.sku || v?.name || "").trim() ===
+              String(defaultVariant?.key || "").trim(),
+          ) || variants[0];
+        if (rawVariant) {
+          if (
+            rawVariant.stock !== undefined &&
+            rawVariant.stock !== null &&
+            Number(rawVariant.stock) <= 0
+          )
+            return true;
+          if (
+            rawVariant.status === "out_of_stock" ||
+            rawVariant.status === "OUT_OF_STOCK"
+          )
+            return true;
+        }
+      }
+
+      if (
+        product.stock !== undefined &&
+        product.stock !== null &&
+        Number(product.stock) <= 0
+      ) {
+        return true;
+      }
+
+      return false;
+    }, [product, defaultVariant]);
+
     const handleAddToCart = React.useCallback(
       (e) => {
         e.preventDefault();
         e.stopPropagation();
+
+        if (isOutOfStock) {
+          showToast(`${product.name} is currently out of stock`, "error");
+          return;
+        }
 
         // If the product has multiple variants, open the product detail sheet
         // so the user can select which variant they want to add.
@@ -144,7 +190,7 @@ const ProductCard = React.memo(
           toggleWishlistGlobal(product);
         }
       },
-      [animateAddToCart, product, addToCart, variantKey, defaultVariant?.name, openProduct, isWishlistPage, isWishlisted, toggleWishlistGlobal],
+      [isOutOfStock, showToast, animateAddToCart, product, addToCart, variantKey, defaultVariant?.name, openProduct, isWishlistPage, isWishlisted, toggleWishlistGlobal],
     );
 
     const handleIncrement = React.useCallback(
@@ -308,7 +354,7 @@ const ProductCard = React.memo(
                 "font-semibold",
                 compact ? "text-[8px]" : "text-[9px] sm:text-[10px]",
               )}>
-              {product.deliveryTime || "8-12 mins"}
+              {product.deliveryTime || currentLocation?.time || "10-15 mins"}
             </span>
           </div>
 
@@ -335,7 +381,19 @@ const ProductCard = React.memo(
 
             {/* ADD Button / Quantity Selector (Always in price row) */}
             <div className="flex">
-              {quantity > 0 ? (
+              {isOutOfStock ? (
+                <button
+                  disabled
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  className={cn(
+                    "bg-slate-100 border-[1.5px] border-slate-200 text-slate-400 rounded-lg font-black shadow-xs uppercase tracking-wide leading-none cursor-not-allowed pointer-events-none opacity-80",
+                    compact
+                      ? "px-2 py-1 text-[8px]"
+                      : "px-2.5 py-1.5 text-[9px] sm:px-3 sm:py-2 sm:text-[10px] md:text-xs",
+                  )}>
+                  OUT OF STOCK
+                </button>
+              ) : quantity > 0 ? (
                 <div
                   className={cn(
                     "flex items-center bg-white border-[1.5px] border-primary rounded-lg p-0.5 justify-between",

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import Lottie from "lottie-react";
 import LocationDrawer from "./LocationDrawer";
 import { useLocation } from "../../context/LocationContext";
@@ -169,6 +170,66 @@ const MainLocationHeader = ({
   const appName = settings?.appName || "App";
   const logoUrl = settings?.logoUrl || "";
   const navigate = useNavigate();
+
+  // Voice Search Logic
+  const [isListening, setIsListening] = useState(false);
+  const [voiceTranscript, setVoiceTranscript] = useState("");
+
+  const handleVoiceSearch = (e) => {
+    e.stopPropagation();
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      navigate("/search");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-IN";
+    recognition.continuous = false;
+    recognition.interimResults = true;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setVoiceTranscript("");
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.onresult = (event) => {
+      let transcript = "";
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        transcript += event.results[i][0].transcript;
+      }
+
+      if (transcript) {
+        setVoiceTranscript(transcript);
+        if (event.results[event.results.length - 1].isFinal) {
+          setIsListening(false);
+          navigate("/search", { state: { query: transcript } });
+        }
+      }
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error:", event.error);
+      setIsListening(false);
+      if (event.error === "not-allowed") {
+        alert("Microphone access denied. Please enable microphone permissions in your browser settings.");
+      } else {
+        navigate("/search");
+      }
+    };
+
+    try {
+      recognition.start();
+    } catch (err) {
+      console.error("Error starting speech recognition:", err);
+      navigate("/search");
+    }
+  };
 
   // Search Logic
   const handleSearchClick = () => {
@@ -429,7 +490,14 @@ const MainLocationHeader = ({
                   className="flex-1 bg-transparent border-none outline-none pl-2 text-slate-800 font-semibold placeholder:text-black text-[15px] cursor-pointer"
                 />
                 <div className="flex items-center gap-2 border-l border-slate-100 pl-3">
-                  <MicIcon sx={{ color: "#000000", fontSize: 20 }} />
+                  <button
+                    type="button"
+                    onClick={handleVoiceSearch}
+                    className="p-1.5 rounded-full hover:bg-black/5 transition-all text-slate-800 active:scale-90 flex items-center justify-center cursor-pointer"
+                    title="Voice Search"
+                  >
+                    <MicIcon sx={{ color: isListening ? "#ef4444" : "#000000", fontSize: 20 }} className={isListening ? "animate-pulse" : ""} />
+                  </button>
                 </div>
               </motion.div>
             </div>
@@ -547,10 +615,66 @@ const MainLocationHeader = ({
                 className="flex-1 bg-transparent border-none outline-none pl-2 text-slate-800 font-semibold placeholder:text-black text-[14px] cursor-pointer"
               />
               <div className="flex items-center gap-2 border-l border-slate-100 pl-2.5">
-                <MicIcon sx={{ color: "#000000", fontSize: 18 }} />
+                <button
+                  type="button"
+                  onClick={handleVoiceSearch}
+                  className="p-1 rounded-full hover:bg-black/5 transition-all text-slate-800 active:scale-90 flex items-center justify-center cursor-pointer"
+                  title="Voice Search"
+                >
+                  <MicIcon sx={{ color: isListening ? "#ef4444" : "#000000", fontSize: 18 }} className={isListening ? "animate-pulse" : ""} />
+                </button>
               </div>
             </motion.div>
           </div>
+
+          {/* Voice Search Overlay Modal */}
+          {createPortal(
+            <AnimatePresence>
+              {isListening && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4"
+                  onClick={() => setIsListening(false)}
+                >
+                  <motion.div
+                    initial={{ scale: 0.9, y: 10 }}
+                    animate={{ scale: 1, y: 0 }}
+                    exit={{ scale: 0.9, y: 10 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl flex flex-col items-center gap-4 relative overflow-hidden"
+                  >
+                    <div className="relative flex items-center justify-center my-2">
+                      <span className="absolute w-20 h-20 rounded-full bg-emerald-100 animate-ping opacity-75" />
+                      <div className="w-16 h-16 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg relative z-10">
+                        <MicIcon sx={{ fontSize: 32 }} />
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-lg font-black text-slate-900 leading-tight">Listening...</h3>
+                      <p className="text-xs font-semibold text-slate-500 mt-1">Say item name (e.g., "Chips", "Milk", "Bread")</p>
+                    </div>
+
+                    {voiceTranscript && (
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-emerald-700 max-w-full truncate">
+                        "{voiceTranscript}"
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => setIsListening(false)}
+                      className="mt-2 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase tracking-wider cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>,
+            document.body
+          )}
 
           {/* Categories Navigation - Smooth Collapse */}
           {categories.length > 0 && (

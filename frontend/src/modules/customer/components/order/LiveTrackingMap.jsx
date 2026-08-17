@@ -11,7 +11,9 @@ import {
   Star,
   Search,
   Loader2,
+  User,
 } from "lucide-react";
+import { applyCloudinaryTransform } from "@/core/utils/imageUtils";
 import customerPin from "@/assets/customer-pin.png";
 import deliveryIcon from "@/assets/deliveryIcon.png";
 import storePin from "@/assets/store-pin.png";
@@ -53,6 +55,7 @@ const LiveTrackingMap = memo(({
   eta = "8 mins",
   riderName = "Ramesh Kumar",
   riderPhone,
+  riderImage,
   riderLocation,
   sellerLocation,
   destinationLocation,
@@ -452,12 +455,18 @@ const LiveTrackingMap = memo(({
             className="bg-white/95 backdrop-blur-md rounded-2xl p-3 shadow-lg border border-white/50">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <div className="h-10 w-10 rounded-full bg-gray-100 overflow-hidden border-2 border-white shadow-sm">
-                  <img
-                    src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=100&auto=format&fit=crop&q=60"
-                    alt="Rider"
-                    className="h-full w-full object-cover"
-                  />
+                <div className="h-10 w-10 rounded-full bg-gray-100 overflow-hidden border-2 border-white shadow-sm flex items-center justify-center">
+                  {riderImage ? (
+                    <img
+                      src={applyCloudinaryTransform(riderImage)}
+                      alt="Rider"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center font-black text-sm text-slate-700 bg-slate-100">
+                      {riderName ? riderName.charAt(0).toUpperCase() : <User size={16} />}
+                    </div>
+                  )}
                 </div>
                 <div className="absolute -bottom-0.5 -right-0.5 bg-primary text-primary-foreground text-[7px] font-bold px-1 py-0.5 rounded-full flex items-center gap-0.5">
                   4.8 <Star size={5} fill="white" />

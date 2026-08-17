@@ -152,12 +152,34 @@ const ProductDetailSheet = () => {
         }
     };
 
-    const fetchReviews = async (productId) => {
+    const [ratingSummary, setRatingSummary] = useState({ average: 0, count: 0, distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } });
+    const [selectedStarFilter, setSelectedStarFilter] = useState("");
+
+    const fetchReviews = async (productId, starFilter = "") => {
         try {
             setReviewLoading(true);
-            const res = await customerApi.getProductReviews(productId);
-            if (res.data.success) {
-                setReviews(res.data.results);
+            const params = { page: 1, limit: 10, sort: 'recent' };
+            if (starFilter) params.rating = starFilter;
+
+            const [summaryRes, ratingsRes] = await Promise.allSettled([
+                customerApi.getProductRatingSummary(productId),
+                customerApi.getProductRatingsList(productId, params),
+            ]);
+
+            if (summaryRes.status === "fulfilled" && summaryRes.value?.data?.success) {
+                const s = summaryRes.value.data.result || summaryRes.value.data.results || {};
+                setRatingSummary({
+                    average: s.average || 0,
+                    count: s.count || 0,
+                    sum: s.sum || 0,
+                    distribution: s.distribution || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+                });
+            }
+
+            if (ratingsRes.status === "fulfilled" && ratingsRes.value?.data?.success) {
+                const payload = ratingsRes.value.data.result || ratingsRes.value.data.results || {};
+                const items = Array.isArray(payload.items) ? payload.items : Array.isArray(payload) ? payload : [];
+                setReviews(items);
             }
         } catch (error) {
             console.error("Fetch reviews error:", error);
@@ -275,7 +297,27 @@ const ProductDetailSheet = () => {
         );
     };
 
+    const isOutOfStock = useMemo(() => {
+        if (!selectedProduct) return false;
+        if (selectedProduct.status === "out_of_stock" || selectedProduct.status === "OUT_OF_STOCK") return true;
+        if (selectedProduct.inStock === false || selectedProduct.isOutOfStock === true) return true;
+
+        if (selectedVariant) {
+            if (selectedVariant.stock !== undefined && selectedVariant.stock !== null && Number(selectedVariant.stock) <= 0) return true;
+            if (selectedVariant.status === "out_of_stock" || selectedVariant.status === "OUT_OF_STOCK") return true;
+        } else if (selectedProduct.stock !== undefined && selectedProduct.stock !== null && Number(selectedProduct.stock) <= 0) {
+            return true;
+        }
+
+        return false;
+    }, [selectedProduct, selectedVariant]);
+
     const handleAddToCart = () => {
+        if (isOutOfStock) {
+            showToast(`${selectedProduct.name} is currently out of stock`, 'error');
+            return;
+        }
+
         addToCart({
             ...selectedProduct,
             variantSku: String(selectedVariant?.sku || selectedVariant?.name || "").trim(),
@@ -464,7 +506,7 @@ const ProductDetailSheet = () => {
                                                 className="inline-flex items-center gap-1.5 bg-[#ecfeff] border border-brand-200/50 text-primary px-3 py-1.5 rounded-lg text-[10px] font-[700] uppercase tracking-wider"
                                             >
                                                 <Clock size={12} strokeWidth={2.5} className="text-primary" />
-                                                {selectedProduct.deliveryTime || '8-15 MINS'}
+                                                {selectedProduct.deliveryTime || currentLocation?.time || '10-15 MINS'}
                                             </motion.div>
                                             {selectedProduct.originalPrice > selectedProduct.price && (
                                                 <motion.div
@@ -483,8 +525,8 @@ const ProductDetailSheet = () => {
                                                 className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-50 text-orange-600 rounded-lg text-[10px] font-[700] border border-orange-100/50"
                                             >
                                                 <Star size={10} fill="currentColor" />
-                                                {reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : '4.8'}
-                                                <span className="text-orange-400 font-medium">({reviews.length > 0 ? reviews.length : '120+'})</span>
+                                                {ratingSummary.count > 0 ? Number(ratingSummary.average).toFixed(1) : (selectedProduct?.ratingAverage ? Number(selectedProduct.ratingAverage).toFixed(1) : '0.0')}
+                                                <span className="text-orange-400 font-medium">({ratingSummary.count > 0 ? ratingSummary.count : (selectedProduct?.ratingCount || 0)})</span>
                                             </motion.div>
                                         </div>
 
@@ -531,7 +573,15 @@ const ProductDetailSheet = () => {
                                                     )}
                                                 </div>
                                                 <div>
-                                                    {quantity > 0 ? (
+                                                    {isOutOfStock ? (
+                                                        <button
+                                                            disabled
+                                                            className="bg-slate-100 border border-slate-200 text-slate-400 h-12 px-6 rounded-xl font-black text-[13px] flex items-center gap-2 cursor-not-allowed uppercase tracking-widest pointer-events-none opacity-80"
+                                                        >
+                                                            <ShoppingBag size={16} strokeWidth={3} />
+                                                            Out of Stock
+                                                        </button>
+                                                    ) : quantity > 0 ? (
                                                         <div className="flex items-center gap-1 bg-white border border-brand-200 rounded-xl p-1 shadow-sm">
                                                             <motion.button whileTap={{ scale: 0.85 }} onClick={handleDecrement} className="w-9 h-9 bg-brand-50 rounded-lg flex items-center justify-center text-brand-700 hover:bg-brand-100 transition-colors">
                                                                 <Minus size={16} strokeWidth={2.5} />
@@ -656,85 +706,101 @@ const ProductDetailSheet = () => {
                                             {/* Customer Reviews */}
                                             <AccordionItem expandedSections={expandedSections} toggleSection={toggleSection}
                                                 id="reviews" 
-                                                title={`Customer Reviews (${reviews.length > 0 ? reviews.length : '120+'})`}
+                                                title={`Customer Reviews (${ratingSummary.count > 0 ? ratingSummary.count : reviews.length})`}
                                                 icon={<Star size={16} />}
                                             >
-                                                <div className="space-y-6 mt-2">
-                                                    <div className="flex items-center justify-between mb-4">
-                                                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-50 text-primary rounded-xl text-xs font-black border border-brand-100">
-                                                            <Star size={14} fill="currentColor" />
-                                                            {reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : '4.8'}
+                                                <div className="space-y-4 mt-2">
+                                                    <div className="flex items-center justify-between gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="text-2xl font-black text-slate-800">
+                                                                {ratingSummary.count > 0 ? Number(ratingSummary.average).toFixed(1) : (selectedProduct?.ratingAverage ? Number(selectedProduct.ratingAverage).toFixed(1) : '0.0')}
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <div className="flex gap-0.5">
+                                                                    {[1, 2, 3, 4, 5].map((s) => (
+                                                                        <Star key={s} size={11} className={cn(s <= Math.round(ratingSummary.average || selectedProduct?.ratingAverage || 0) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-100')} />
+                                                                    ))}
+                                                                </div>
+                                                                <span className="text-[10px] text-slate-400 font-bold mt-0.5">{ratingSummary.count || 0} Ratings</span>
+                                                            </div>
                                                         </div>
                                                     </div>
 
-                                                    {/* Review Form */}
-                                                    {selectedProduct?.hasReviewed || extendedProduct?.hasReviewed || localHasReviewed ? (
-                                                        <div className="bg-brand-50 p-4 rounded-2xl border border-brand-100 mb-6 text-center">
-                                                            <p className="text-[11px] font-bold text-primary uppercase tracking-wide">You have already reviewed this product. Thank you!</p>
-                                                        </div>
-                                                    ) : (selectedProduct?.hasPurchased || extendedProduct?.hasPurchased) ? (
-                                                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-6">
-                                                            <h4 className="font-black text-slate-800 text-xs mb-3 flex items-center gap-2">
-                                                                <MessageSquare size={13} className="text-primary" />
-                                                                Rate this product
-                                                            </h4>
-                                                            <form onSubmit={handleReviewSubmit} className="space-y-3">
-                                                                <div className="flex gap-1.5">
-                                                                    {[1, 2, 3, 4, 5].map((s) => (
-                                                                        <motion.button
-                                                                            key={s}
-                                                                            type="button"
-                                                                            whileHover={{ scale: 1.1 }}
-                                                                            whileTap={{ scale: 0.9 }}
-                                                                            onClick={() => setNewReview({ ...newReview, rating: s })}
-                                                                            className={cn(
-                                                                                'h-9 w-9 rounded-xl flex items-center justify-center transition-all shadow-sm',
-                                                                                newReview.rating >= s ? 'bg-brand-50 text-primary border border-brand-100' : 'bg-white text-slate-300 border border-slate-100'
-                                                                            )}
-                                                                        >
-                                                                            <Star size={15} className={cn(newReview.rating >= s && 'fill-current')} />
-                                                                        </motion.button>
-                                                                    ))}
-                                                                </div>
-                                                                <textarea value={newReview.comment} onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })} placeholder="Share your experience..." className="w-full bg-white border border-slate-100 rounded-xl p-3 text-xs font-medium min-h-[80px] outline-none focus:border-primary transition-all resize-none shadow-sm" />
-                                                                <Button type="submit" disabled={isSubmittingReview} className="w-full h-10 bg-primary hover:opacity-90 text-white font-black rounded-xl text-[11px] uppercase tracking-[0.1em] transition-all shadow-lg shadow-brand-100">
-                                                                    {isSubmittingReview ? 'Submitting...' : 'Post Review'}
-                                                                    </Button>
-                                                            </form>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-6 text-center">
-                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">You must purchase this product to rate it</p>
-                                                        </div>
-                                                    )}
+                                                    {/* Rating Filter Chips */}
+                                                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+                                                        {['', '5', '4', '3', '2', '1'].map((starVal) => (
+                                                            <button
+                                                                key={starVal}
+                                                                onClick={() => {
+                                                                    setSelectedStarFilter(starVal);
+                                                                    fetchReviews(selectedProduct.id || selectedProduct._id, starVal);
+                                                                }}
+                                                                className={cn(
+                                                                    'px-3 py-1 rounded-xl text-[11px] font-bold border transition-all shrink-0',
+                                                                    selectedStarFilter === starVal
+                                                                        ? 'bg-primary text-white border-primary shadow-xs'
+                                                                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                                                                )}
+                                                            >
+                                                                {starVal ? `${starVal} ★` : 'All Ratings'}
+                                                            </button>
+                                                        ))}
+                                                    </div>
 
                                                     {/* Reviews List */}
                                                     <div className="space-y-3">
                                                         {reviewLoading ? (
                                                             <div className="flex justify-center py-6"><Loader2 className="animate-spin text-primary" size={20} /></div>
                                                         ) : reviews.length > 0 ? (
-                                                            reviews.map((r, rIdx) => (
-                                                                <div key={r._id} className="p-4 rounded-xl border border-slate-100 bg-white hover:shadow-md hover:translate-x-1 transition-all group">
+                                                            reviews.map((r) => (
+                                                                <div key={r.id || r._id} className="p-4 rounded-xl border border-slate-100 bg-white hover:shadow-md transition-all group">
                                                                     <div className="flex justify-between items-start mb-2">
                                                                         <div className="flex items-center gap-2">
-                                                                            <div className="h-8 w-8 rounded-full bg-brand-50 flex items-center justify-center text-[11px] font-black text-primary border border-brand-100">{r.userId?.name?.[0] || 'A'}</div>
+                                                                            <div className="h-8 w-8 rounded-full bg-brand-50 flex items-center justify-center text-[11px] font-black text-primary border border-brand-100">
+                                                                                {(r.customerName || r.userId?.name || 'V')?.[0]}
+                                                                            </div>
                                                                             <div>
-                                                                                <p className="text-[12px] font-black text-slate-800">
-                                                                                    {r.userId?.name || 'Anonymous'}
-                                                                                    {r.status === 'pending' && <span className="ml-2 text-[10px] font-bold text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded uppercase">Pending</span>}
+                                                                                <p className="text-[12px] font-black text-slate-800 flex items-center gap-1.5">
+                                                                                    {r.customerName || r.userId?.name || 'Verified Customer'}
+                                                                                    {r.isVerifiedPurchase && (
+                                                                                        <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded">
+                                                                                            ✓ Verified Purchase
+                                                                                        </span>
+                                                                                    )}
                                                                                 </p>
-                                                                                <div className="flex gap-0.5 mt-0.5">{[...Array(5)].map((_, i) => <Star key={i} size={9} className={cn(i < r.rating ? 'text-primary fill-primary' : 'text-slate-200')} />)}</div>
+                                                                                <div className="flex gap-0.5 mt-0.5">
+                                                                                    {[...Array(5)].map((_, i) => (
+                                                                                        <Star key={i} size={10} className={cn(i < r.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-100')} />
+                                                                                    ))}
+                                                                                </div>
                                                                             </div>
                                                                         </div>
-                                                                        <span className="text-[10px] font-bold text-slate-400">{new Date(r.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                                                                        <span className="text-[10px] font-bold text-slate-400">
+                                                                            {new Date(r.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                                                        </span>
                                                                     </div>
-                                                                    <p className="text-[12px] text-slate-600 font-medium leading-relaxed pl-10">{r.comment}</p>
+
+                                                                    {Array.isArray(r.feedbackTags) && r.feedbackTags.length > 0 && (
+                                                                        <div className="flex flex-wrap gap-1 mb-2 pl-10">
+                                                                            {r.feedbackTags.map((tag) => (
+                                                                                <span key={tag} className="text-[9px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md uppercase">
+                                                                                    {tag.replace(/_/g, ' ')}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+
+                                                                    {r.comment && (
+                                                                        <p className="text-[12px] text-slate-600 font-medium leading-relaxed pl-10">
+                                                                            {r.comment}
+                                                                        </p>
+                                                                    )}
                                                                 </div>
                                                             ))
                                                         ) : (
                                                             <div className="py-10 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
                                                                 <MessageSquare size={20} className="text-slate-300 mx-auto mb-2" />
-                                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No reviews yet — be the first!</p>
+                                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No reviews found</p>
                                                             </div>
                                                         )}
                                                     </div>
@@ -867,7 +933,7 @@ const ProductDetailSheet = () => {
                                 {/* Delivery Time Badge */}
                                 <div className="inline-flex items-center gap-1.5 bg-[#F0FDF4] border border-brand-100 text-primary px-2.5 py-1 rounded-lg text-[10px] font-black uppercase mb-3">
                                     <Clock size={12} strokeWidth={3} />
-                                    {selectedProduct.deliveryTime || "8 Mins"}
+                                    {selectedProduct.deliveryTime || currentLocation?.time || "10-15 Mins"}
                                 </div>
 
                                 <h2 className="text-xl font-black text-[#1A1A1A] leading-tight mb-2">
@@ -1047,7 +1113,15 @@ const ProductDetailSheet = () => {
                                         </div>
                                     </div>
 
-                                    {quantity > 0 ? (
+                                    {isOutOfStock ? (
+                                        <button
+                                            disabled
+                                            className="flex-1 bg-slate-100 border border-slate-200 text-slate-400 h-[56px] rounded-2xl font-black text-sm flex items-center justify-center gap-2 cursor-not-allowed uppercase tracking-[0.05em] whitespace-nowrap px-4 pointer-events-none opacity-80"
+                                        >
+                                            <ShoppingBag size={18} strokeWidth={3} />
+                                            OUT OF STOCK
+                                        </button>
+                                    ) : quantity > 0 ? (
                                         <div className="flex items-center gap-1 bg-slate-50 border-2 border-slate-100 rounded-2xl p-1.5 shadow-inner flex-1 justify-between max-w-[170px]">
                                             <motion.button
                                                 whileTap={{ scale: 0.9 }}

@@ -83,7 +83,7 @@ const CustomerAuth = () => {
 
     const [formData, setFormData] = useState(() => {
         const saved = sessionStorage.getItem('customer_auth_form_data');
-        return saved ? JSON.parse(saved) : { phone: '', otp: '', name: '' };
+        return saved ? JSON.parse(saved) : { loginPhone: '', signupPhone: '', otp: '', name: '' };
     });
 
     useEffect(() => {
@@ -127,16 +127,17 @@ const CustomerAuth = () => {
 
     const handleSendOtp = async (e) => {
         e?.preventDefault();
-        if (formData.phone.length !== 10) {
+        const activePhone = isLogin ? (formData.loginPhone || '') : (formData.signupPhone || '');
+        if (activePhone.length !== 10) {
             toast.error('Enter valid 10-digit number');
             return;
         }
         setIsLoading(true);
         try {
             if (isLogin) {
-                await customerApi.sendLoginOtp({ phone: formData.phone });
+                await customerApi.sendLoginOtp({ phone: activePhone });
             } else {
-                await customerApi.sendSignupOtp({ name: formData.name, phone: formData.phone });
+                await customerApi.sendSignupOtp({ name: formData.name, phone: activePhone });
             }
             setShowOtp(true);
             setTimer(30);
@@ -150,13 +151,14 @@ const CustomerAuth = () => {
 
     const handleVerifyOtp = async (e) => {
         e.preventDefault();
+        const activePhone = isLogin ? (formData.loginPhone || '') : (formData.signupPhone || '');
         if (formData.otp.length !== 4) {
             toast.error('Enter 4-digit code');
             return;
         }
         setIsLoading(true);
         try {
-            const response = await customerApi.verifyOtp({ phone: formData.phone, otp: formData.otp });
+            const response = await customerApi.verifyOtp({ phone: activePhone, otp: formData.otp });
             const { token, customer } = response.data.result;
             sessionStorage.removeItem('customer_auth_is_login');
             sessionStorage.removeItem('customer_auth_form_data');
@@ -172,7 +174,7 @@ const CustomerAuth = () => {
     };
 
     return (
-        <div className="min-h-screen w-full relative flex items-center justify-center font-['Outfit',_sans-serif] overflow-hidden">
+        <div className="min-h-screen min-h-dvh w-full relative flex items-center justify-center font-['Outfit',_sans-serif] p-4 py-6 overflow-y-auto">
 
             {/* Dynamic Atmospheric Background */}
             <div 
@@ -221,10 +223,10 @@ const CustomerAuth = () => {
             </div>
 
             {/* Premium Centered Card Container */}
-            <div className="w-[92%] max-w-[400px] max-h-[85vh] bg-white relative z-10 overflow-hidden rounded-[40px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] border border-white/40 flex flex-col transition-colors duration-1000">
+            <div className="w-[92%] max-w-[400px] h-[88vh] max-h-[720px] bg-white relative z-10 overflow-hidden rounded-[40px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] border border-white/40 flex flex-col transition-colors duration-1000">
 
                 {/* Scrollable Content Container */}
-                <div ref={scrollableRef} className="flex-1 overflow-y-auto no-scrollbar pb-20">
+                <div ref={scrollableRef} className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pb-8">
 
                     {/* Header: Immersive Category Visuals */}
                     <motion.div
@@ -316,7 +318,7 @@ const CustomerAuth = () => {
 
 
                     {/* Authentication Form Block */}
-                    <div className="px-6 pt-6 pb-10">
+                    <div className="px-6 pt-0.5 pb-10">
                         <AnimatePresence mode="wait">
                             {!showOtp ? (
                                 <motion.div
@@ -324,7 +326,7 @@ const CustomerAuth = () => {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, x: -20 }}
-                                    className="space-y-5"
+                                    className="space-y-3"
                                 >
                                     {/* App Style Tab Switcher */}
                                     <div className="flex bg-gray-50 rounded-2xl p-1.5 border border-gray-100">
@@ -353,7 +355,7 @@ const CustomerAuth = () => {
                                         </p>
                                     </div>
 
-                                    <form onSubmit={handleSendOtp} className="space-y-4">
+                                    <form onSubmit={handleSendOtp} className="space-y-3">
                                         {!isLogin && (
                                             <div className="relative group">
                                                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 transition-colors" style={{ color: 'inherit' }}>
@@ -366,7 +368,7 @@ const CustomerAuth = () => {
                                                     maxLength={50}
                                                     pattern="[a-zA-Z\s]*"
                                                     placeholder="Full Name"
-                                                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold text-gray-800 outline-none focus:bg-white transition-all"
+                                                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-12 pr-4 py-3 text-sm font-bold text-gray-800 outline-none focus:bg-white transition-all"
                                                     style={{ '--theme-color': activeCategory.theme }}
                                                     onChange={(e) => setFormData({ ...formData, name: e.target.value.replace(/[^a-zA-Z\s]/g, '') })}
                                                     onFocus={(e) => {
@@ -390,11 +392,11 @@ const CustomerAuth = () => {
                                                 pattern="[0-9]*"
                                                 autoComplete="tel"
                                                 name="phone"
-                                                value={formData.phone || ''}
+                                                value={isLogin ? (formData.loginPhone || '') : (formData.signupPhone || '')}
                                                 maxLength={10}
                                                 placeholder="Mobile Number"
-                                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-20 pr-4 py-4 text-sm font-bold text-gray-800 outline-none focus:bg-white transition-all"
-                                                onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })}
+                                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-20 pr-4 py-3 text-sm font-bold text-gray-800 outline-none focus:bg-white transition-all"
+                                                onChange={(e) => setFormData({ ...formData, [isLogin ? 'loginPhone' : 'signupPhone']: e.target.value.replace(/\D/g, '') })}
                                                 onFocus={(e) => {
                                                     e.target.style.borderColor = activeCategory.theme;
                                                 }}
@@ -405,8 +407,8 @@ const CustomerAuth = () => {
                                         <button
                                             type="submit"
                                             disabled={isLoading}
-                                            className="w-full text-white py-5 rounded-[24px] text-xs font-black tracking-[4px] flex items-center justify-center gap-3 active:scale-95 transition-all uppercase"
-                                            style={{ backgroundColor: activeCategory.theme, boxShadow: `0 20px 40px ${activeCategory.shadow}` }}
+                                            className="w-full text-white py-3.5 rounded-2xl text-xs font-black tracking-[3px] flex items-center justify-center gap-2 active:scale-95 transition-all uppercase"
+                                            style={{ backgroundColor: activeCategory.theme, boxShadow: `0 14px 30px ${activeCategory.shadow}` }}
                                         >
                                             {isLoading ? 'Verifying...' : 'Continue'}
                                             <ChevronRight size={18} />
@@ -457,7 +459,7 @@ const CustomerAuth = () => {
                                         </button>
                                         <div>
                                             <h3 className="text-xl font-black text-gray-900 tracking-tight">Verify Device</h3>
-                                            <p className="text-[10px] font-black tracking-widest text-gray-400 uppercase">+91 {formData.phone}</p>
+                                            <p className="text-[10px] font-black tracking-widest text-gray-400 uppercase">+91 {isLogin ? formData.loginPhone : formData.signupPhone}</p>
                                         </div>
                                     </div>
 

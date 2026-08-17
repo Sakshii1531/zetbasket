@@ -660,17 +660,51 @@ const OrderDetail = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {order.items.map((item, idx) => (
-                                        <tr key={idx} style={{ borderBottom: "1px solid #e2e8f0", backgroundColor: idx % 2 === 0 ? "#ffffff" : "#f8fafc" }}>
-                                            <td style={{ padding: "16px 18px" }}>
-                                                <div style={{ fontSize: "15px", fontWeight: "800", color: "#0f172a" }}>{item.name}</div>
-                                                <div style={{ fontSize: "11px", color: "#64748b", fontWeight: "600", marginTop: "3px" }}>ID: {item.product?._id || item.product || 'N/A'}</div>
-                                            </td>
-                                            <td align="center" style={{ padding: "16px 18px", fontSize: "14px", color: "#0f172a", fontWeight: "700" }}>₹{item.price}</td>
-                                            <td align="center" style={{ padding: "16px 18px", fontSize: "14px", color: "#0f172a", fontWeight: "900" }}>{item.quantity}</td>
-                                            <td align="right" style={{ padding: "16px 18px", fontSize: "15px", fontWeight: "900", color: "#0f172a" }}>₹{item.price * item.quantity}</td>
-                                        </tr>
-                                    ))}
+                                    {order.items.map((item, idx) => {
+                                        const isRawSku = (val) => {
+                                            if (!val || typeof val !== 'string') return true;
+                                            const s = val.trim();
+                                            return /^[a-zA-Z0-9_-]+-\d+$/i.test(s) || /^sku-/i.test(s);
+                                        };
+
+                                        const rawSku = String(item.variantSku || item.variantSlot || '').trim();
+                                        const matchedVariant = Array.isArray(item.product?.variants) && rawSku
+                                            ? item.product.variants.find(v => String(v.sku || '').trim() === rawSku || String(v._id || '').trim() === rawSku)
+                                            : null;
+
+                                        const candidateName =
+                                            (item.variantName && !isRawSku(item.variantName) ? item.variantName : null) ||
+                                            matchedVariant?.name ||
+                                            item.unit ||
+                                            item.product?.unit ||
+                                            item.weight ||
+                                            item.product?.weight ||
+                                            item.pack ||
+                                            item.product?.pack ||
+                                            (item.variantSlot && !isRawSku(item.variantSlot) ? item.variantSlot : null) ||
+                                            (item.variantText && !isRawSku(item.variantText) ? item.variantText : null) ||
+                                            (typeof item.variant === 'string' && !isRawSku(item.variant) ? item.variant : item.variant?.name || item.variant?.title) ||
+                                            (typeof item.selectedVariant === 'string' && !isRawSku(item.selectedVariant) ? item.selectedVariant : item.selectedVariant?.name || item.selectedVariant?.title);
+
+                                        const variantName = candidateName && !isRawSku(candidateName) ? candidateName : (matchedVariant?.name || item.product?.unit || null);
+
+                                        return (
+                                            <tr key={idx} style={{ borderBottom: "1px solid #e2e8f0", backgroundColor: idx % 2 === 0 ? "#ffffff" : "#f8fafc" }}>
+                                                <td style={{ padding: "16px 18px" }}>
+                                                    <div style={{ fontSize: "15px", fontWeight: "800", color: "#0f172a" }}>{item.name}</div>
+                                                    {variantName && (
+                                                        <div style={{ fontSize: "12px", color: "#2563eb", fontWeight: "700", marginTop: "3px" }}>
+                                                            Variant: {variantName}
+                                                        </div>
+                                                    )}
+                                                    <div style={{ fontSize: "11px", color: "#64748b", fontWeight: "600", marginTop: "3px" }}>ID: {item.product?._id || item.product || 'N/A'}</div>
+                                                </td>
+                                                <td align="center" style={{ padding: "16px 18px", fontSize: "14px", color: "#0f172a", fontWeight: "700" }}>₹{item.price}</td>
+                                                <td align="center" style={{ padding: "16px 18px", fontSize: "14px", color: "#0f172a", fontWeight: "900" }}>{item.quantity}</td>
+                                                <td align="right" style={{ padding: "16px 18px", fontSize: "15px", fontWeight: "900", color: "#0f172a" }}>₹{item.price * item.quantity}</td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>

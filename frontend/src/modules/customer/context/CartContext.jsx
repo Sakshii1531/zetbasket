@@ -3,7 +3,19 @@ import { customerApi } from "../services/customerApi";
 import { useAuth } from "../../../core/context/AuthContext";
 import { getJSON, setJSON, remove as removeStorage, STORAGE_KEYS } from "@core/utils/storage";
 
-const CartContext = createContext();
+const defaultCartContext = {
+  cart: [],
+  addToCart: () => {},
+  cartTotal: 0,
+  cartCount: 0,
+  updateQuantity: () => {},
+  removeFromCart: () => {},
+  clearCart: () => {},
+  loading: false,
+  isItemOutOfStock: () => false,
+};
+
+const CartContext = createContext(defaultCartContext);
 
 const loadGuestCart = () => {
   const parsed = getJSON(STORAGE_KEYS.CART, []);
@@ -14,7 +26,13 @@ const loadGuestCart = () => {
   return parsed;
 };
 
-export const useCart = () => useContext(CartContext);
+export const useCart = () => {
+  const context = useContext(CartContext);
+  if (!context) {
+    return defaultCartContext;
+  }
+  return context;
+};
 
 export const CartProvider = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -120,8 +138,34 @@ export const CartProvider = ({ children }) => {
     };
   }, [cart, isAuthenticated]);
 
+  const isItemOutOfStock = (prod, varSku = "") => {
+    if (!prod) return false;
+    if (prod.status === "out_of_stock" || prod.status === "OUT_OF_STOCK") return true;
+    if (prod.inStock === false || prod.isOutOfStock === true) return true;
+
+    const variants = Array.isArray(prod?.variants) ? prod.variants : [];
+    if (variants.length > 0 && varSku) {
+      const hit = variants.find(
+        (v) =>
+          String(v?.sku || v?.name || "").trim() === String(varSku).trim(),
+      );
+      if (hit) {
+        if (hit.stock !== undefined && hit.stock !== null && Number(hit.stock) <= 0) return true;
+        if (hit.status === "out_of_stock" || hit.status === "OUT_OF_STOCK") return true;
+      }
+    }
+
+    if (prod.stock !== undefined && prod.stock !== null && Number(prod.stock) <= 0) {
+      return true;
+    }
+    return false;
+  };
+
   const addToCart = async (product) => {
     const variantSku = String(product?.variantSku || product?.variantName || "").trim();
+    if (isItemOutOfStock(product, variantSku)) {
+      return false;
+    }
     const id = product.id || product._id;
     const key = `${id}::${variantSku || ""}`;
     const { price, salePrice, variantName } = resolveVariantPricing(product, variantSku);

@@ -46,12 +46,24 @@ const DeliveryAuth = () => {
   }, []);
 
   // mode: "login" | "signup"
-  const [mode, setMode] = useState("login");
+  const [mode, setMode] = useState(() => {
+    return sessionStorage.getItem("delivery_auth_mode") || "login";
+  });
   const [step, setStep] = useState("form"); // "form" | "otp"
   const [showPendingModal, setShowPendingModal] = useState(false);
 
   // Login state
-  const [loginPhone, setLoginPhone] = useState("");
+  const [loginPhone, setLoginPhone] = useState(() => {
+    return sessionStorage.getItem("delivery_auth_login_phone") || "";
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem("delivery_auth_mode", mode);
+  }, [mode]);
+
+  useEffect(() => {
+    sessionStorage.setItem("delivery_auth_login_phone", loginPhone);
+  }, [loginPhone]);
 
   // Signup state
   const [signupStep, setSignupStep] = useState(1);
@@ -333,6 +345,9 @@ const DeliveryAuth = () => {
       }
 
       const { token, delivery } = response.data.result;
+
+      sessionStorage.removeItem("delivery_auth_mode");
+      sessionStorage.removeItem("delivery_auth_login_phone");
 
       login({ ...delivery, token, role: "delivery" });
 

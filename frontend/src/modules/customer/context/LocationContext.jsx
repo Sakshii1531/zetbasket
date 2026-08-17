@@ -361,10 +361,28 @@ export const LocationProvider = ({ children }) => {
   );
 };
 
+const defaultLocationContext = {
+  currentLocation: {
+    name: "Select delivery location",
+    time: "12-15 mins",
+    city: "Indore",
+    state: "Madhya Pradesh",
+    pincode: "452018",
+    latitude: 22.711140989838025,
+    longitude: 75.9001552518043,
+  },
+  savedAddresses: [],
+  isFetchingLocation: false,
+  locationError: null,
+  updateLocation: () => {},
+  requestCurrentLocation: () => {},
+  refreshAddresses: async () => [],
+};
+
 export const useLocation = () => {
   const context = useContext(LocationContext);
-  if (context === undefined) {
-    throw new Error("useLocation must be used within a LocationProvider");
+  if (context === undefined || context === null) {
+    return defaultLocationContext;
   }
   return context;
 };

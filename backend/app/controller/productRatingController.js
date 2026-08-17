@@ -48,8 +48,9 @@ const isWithinRatingWindow = (deliveredAt) => {
 /**
  * Safely update Product Aggregate rating stats atomically
  */
-const updateProductAggregate = async (productId, deltaCount, deltaSum, deltaDist) => {
-  const product = await Product.findById(productId);
+const updateProductAggregate = async (productId, deltaCount, deltaSum, deltaDist, session = null) => {
+  const queryOptions = session ? { session } : {};
+  const product = await Product.findById(productId, null, queryOptions);
   if (!product) return;
 
   const currentSum = Math.max(0, (product.ratingSum || 0) + deltaSum);
@@ -58,17 +59,61 @@ const updateProductAggregate = async (productId, deltaCount, deltaSum, deltaDist
 
   const dist = { ...(product.ratingDistribution || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }) };
   for (const [star, count] of Object.entries(deltaDist)) {
-    dist[star] = Math.max(0, (dist[star] || 0) + count);
+    dist[star] = Math.max(0, (dist[star] || 0) + Number(count));
   }
 
-  await Product.findByIdAndUpdate(productId, {
-    $set: {
-      ratingSum: currentSum,
-      ratingCount: currentCount,
-      ratingAverage: newAverage,
-      ratingDistribution: dist,
+  await Product.findByIdAndUpdate(
+    productId,
+    {
+      $set: {
+        ratingSum: currentSum,
+        ratingCount: currentCount,
+        ratingAverage: newAverage,
+        ratingDistribution: dist,
+      },
     },
-  });
+    queryOptions
+  );
+};
+
+/**
+ * Developer / Admin utility to completely rebuild Product aggregate from ACTIVE ProductRating documents
+ */
+export const rebuildProductRatingAggregate = async (productId, session = null) => {
+  const queryOptions = session ? { session } : {};
+  const activeRatings = await ProductRating.find(
+    { productId, status: RATING_STATUSES.ACTIVE },
+    null,
+    queryOptions
+  ).lean();
+
+  let ratingSum = 0;
+  const ratingCount = activeRatings.length;
+  const ratingDistribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+
+  for (const r of activeRatings) {
+    ratingSum += r.rating;
+    if (ratingDistribution[r.rating] !== undefined) {
+      ratingDistribution[r.rating] += 1;
+    }
+  }
+
+  const ratingAverage = ratingCount > 0 ? Number((ratingSum / ratingCount).toFixed(2)) : 0;
+
+  await Product.findByIdAndUpdate(
+    productId,
+    {
+      $set: {
+        ratingSum,
+        ratingCount,
+        ratingAverage,
+        ratingDistribution,
+      },
+    },
+    queryOptions
+  );
+
+  return { ratingSum, ratingCount, ratingAverage, ratingDistribution };
 };
 
 /**
@@ -156,6 +201,7 @@ export const getEligibility = async (req, res) => {
  * Submit rating for a specific orderItem
  */
 export const submitProductRating = async (req, res) => {
+  let session = null;
   try {
     const { orderItemId, rating, feedbackTags = [], comment = "" } = req.body;
     const customerId = req.user.id;
@@ -214,7 +260,14 @@ export const submitProductRating = async (req, res) => {
     });
 
     if (existing) {
-      return handleResponse(res, 409, "You have already rated this product item");
+      return handleResponse(res, 409, "You have already rated this product item", existing);
+    }
+
+    try {
+      session = await mongoose.startSession();
+      session.startTransaction();
+    } catch (sErr) {
+      session = null;
     }
 
     // Create rating
@@ -230,15 +283,30 @@ export const submitProductRating = async (req, res) => {
       isVerifiedPurchase: true,
     });
 
-    await newRating.save();
+    await newRating.save(session ? { session } : {});
 
     // Update Product Aggregate Rating Stats
-    await updateProductAggregate(productId, 1, numericRating, { [numericRating]: 1 });
+    await updateProductAggregate(productId, 1, numericRating, { [numericRating]: 1 }, session);
+
+    if (session) {
+      await session.commitTransaction();
+      session.endSession();
+    }
 
     return handleResponse(res, 201, "Product rating submitted successfully", newRating);
   } catch (error) {
+    if (session) {
+      try {
+        await session.abortTransaction();
+        session.endSession();
+      } catch (e) {}
+    }
     if (error.code === 11000) {
-      return handleResponse(res, 409, "You have already rated this product item");
+      const existing = await ProductRating.findOne({
+        orderItemId: req.body?.orderItemId,
+        customerId: req.user?.id,
+      }).lean();
+      return handleResponse(res, 200, "Duplicate request resolved using existing rating", existing);
     }
     return handleResponse(res, 500, error.message);
   }
@@ -280,7 +348,7 @@ export const getOrderProductRatings = async (req, res) => {
 export const getProductRatings = async (req, res) => {
   try {
     const { productId } = req.params;
-    const { rating } = req.query;
+    const { rating, sort } = req.query;
     const { page, limit, skip } = getPagination(req, { defaultLimit: 10, maxLimit: 50 });
 
     if (!mongoose.Types.ObjectId.isValid(productId)) {
@@ -296,10 +364,17 @@ export const getProductRatings = async (req, res) => {
       query.rating = Number(rating);
     }
 
+    let sortOptions = { createdAt: -1 };
+    if (sort === "highest") {
+      sortOptions = { rating: -1, createdAt: -1 };
+    } else if (sort === "lowest") {
+      sortOptions = { rating: 1, createdAt: -1 };
+    }
+
     const [items, total] = await Promise.all([
       ProductRating.find(query)
         .populate("customerId", "name")
-        .sort({ createdAt: -1 })
+        .sort(sortOptions)
         .skip(skip)
         .limit(limit)
         .lean(),
@@ -307,10 +382,7 @@ export const getProductRatings = async (req, res) => {
     ]);
 
     const formattedReviews = items.map((r) => {
-      const rawName = r.customerId?.name || "Verified Customer";
-      const anonymousName = rawName.length > 2
-        ? `${rawName.charAt(0)}***${rawName.slice(-1)}`
-        : "Verified Customer";
+      const fullCustomerName = r.customerId?.name || "Verified Customer";
 
       return {
         id: r._id,
@@ -318,7 +390,7 @@ export const getProductRatings = async (req, res) => {
         feedbackTags: r.feedbackTags || [],
         comment: r.comment,
         isVerifiedPurchase: r.isVerifiedPurchase,
-        customerName: anonymousName,
+        customerName: fullCustomerName,
         createdAt: r.createdAt,
       };
     });
@@ -438,6 +510,7 @@ export const getAdminProductRatings = async (req, res) => {
  * Admin moderation status update with atomic aggregate synchronization
  */
 export const updateRatingStatus = async (req, res) => {
+  let session = null;
   try {
     const { id } = req.params;
     const { status, moderationReason = "" } = req.body;
@@ -459,31 +532,57 @@ export const updateRatingStatus = async (req, res) => {
       return handleResponse(res, 200, "Status unchanged", ratingDoc);
     }
 
+    try {
+      session = await mongoose.startSession();
+      session.startTransaction();
+    } catch (sErr) {
+      session = null;
+    }
+
     ratingDoc.status = newStatus;
     ratingDoc.moderatedBy = adminId;
     ratingDoc.moderatedAt = new Date();
     ratingDoc.moderationReason = moderationReason;
 
-    await ratingDoc.save();
+    await ratingDoc.save(session ? { session } : {});
 
-    // Atomic aggregate adjustment on Product
-    const wasActive = oldStatus === RATING_STATUSES.ACTIVE || oldStatus === RATING_STATUSES.FLAGGED;
-    const isActiveNow = newStatus === RATING_STATUSES.ACTIVE || newStatus === RATING_STATUSES.FLAGGED;
+    // Atomic aggregate adjustment on Product: ONLY ACTIVE ratings are included in aggregates (Req 16)
+    const wasActive = oldStatus === RATING_STATUSES.ACTIVE;
+    const isActiveNow = newStatus === RATING_STATUSES.ACTIVE;
 
     if (wasActive && !isActiveNow) {
       // Rating removed from active count
-      await updateProductAggregate(ratingDoc.productId, -1, -ratingDoc.rating, {
-        [ratingDoc.rating]: -1,
-      });
+      await updateProductAggregate(
+        ratingDoc.productId,
+        -1,
+        -ratingDoc.rating,
+        { [ratingDoc.rating]: -1 },
+        session
+      );
     } else if (!wasActive && isActiveNow) {
       // Rating restored to active count
-      await updateProductAggregate(ratingDoc.productId, 1, ratingDoc.rating, {
-        [ratingDoc.rating]: 1,
-      });
+      await updateProductAggregate(
+        ratingDoc.productId,
+        1,
+        ratingDoc.rating,
+        { [ratingDoc.rating]: 1 },
+        session
+      );
+    }
+
+    if (session) {
+      await session.commitTransaction();
+      session.endSession();
     }
 
     return handleResponse(res, 200, `Rating status updated to ${newStatus} successfully`, ratingDoc);
   } catch (error) {
+    if (session) {
+      try {
+        await session.abortTransaction();
+        session.endSession();
+      } catch (e) {}
+    }
     return handleResponse(res, 500, error.message);
   }
 };

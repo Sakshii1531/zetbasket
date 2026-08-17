@@ -14,10 +14,10 @@ const PrivacyPage = () => {
             <div className="bg-white sticky top-0 z-30 px-4 py-3 flex items-center gap-1 shadow-sm">
                 <button
                     onClick={() => {
-                        if (window.history.state && window.history.state.idx > 0) {
+                        if (window.history.length > 1) {
                             navigate(-1);
                         } else {
-                            navigate('/');
+                            window.close();
                         }
                     }}
                     className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition-colors"
