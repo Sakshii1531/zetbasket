@@ -320,7 +320,7 @@ const MapPicker = ({
                 onPlaceChanged={handlePlaceChanged}
                 options={{
                   componentRestrictions: { country: "IN" },
-                  fields: ["geometry", "formatted_address"],
+                  fields: ["geometry", "formatted_address", "address_components", "name"],
                 }}>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />

@@ -64,6 +64,16 @@ body {
   touch-action: manipulation; /* Faster taps */
 }
 
+/* Fix Google Places Autocomplete suggestions dropdown floating above Radix/Shadcn modals */
+.pac-container {
+  z-index: 999999 !important;
+  pointer-events: auto !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  font-family: 'Outfit', sans-serif !important;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
