@@ -127,6 +127,7 @@ export class OrderReturnService {
         quantity: qty,
         price: original.price,
         variantSlot: original.variantSlot,
+        image: original.image,
         itemIndex: targetIndex,
         status: "requested",
       });

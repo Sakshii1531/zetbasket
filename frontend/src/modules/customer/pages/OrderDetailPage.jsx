@@ -253,10 +253,14 @@ const OrderDetailPage = () => {
               setRatingEligibility(eligibilityData);
               if (eligibilityData.hasRated) {
                 setExistingRating(eligibilityData.existingRating || { hasRated: true });
+                localStorage.setItem(`rating_dismissed_${lookupId}`, "true");
+                localStorage.setItem(`rating_completed_${lookupId}`, "true");
                 sessionStorage.setItem(`rating_dismissed_${lookupId}`, "true");
                 sessionStorage.setItem(`rating_completed_${lookupId}`, "true");
               } else if (
                 eligibilityData.eligible &&
+                localStorage.getItem(`rating_dismissed_${lookupId}`) !== "true" &&
+                localStorage.getItem(`rating_completed_${lookupId}`) !== "true" &&
                 sessionStorage.getItem(`rating_dismissed_${lookupId}`) !== "true" &&
                 sessionStorage.getItem(`rating_completed_${lookupId}`) !== "true"
               ) {
@@ -1571,7 +1575,14 @@ const OrderDetailPage = () => {
       {/* Delivery Partner Rating Modal */}
       <DeliveryRatingModal
         isOpen={showRatingModal}
-        onClose={() => setShowRatingModal(false)}
+        onClose={() => {
+          const lid = resolveOrderLookupId(order);
+          if (lid) {
+            localStorage.setItem(`rating_dismissed_${lid}`, "true");
+            sessionStorage.setItem(`rating_dismissed_${lid}`, "true");
+          }
+          setShowRatingModal(false);
+        }}
         orderId={resolveOrderLookupId(order)}
         partnerName={order?.deliveryBoy?.name || "Delivery Partner"}
         partnerImage={order?.deliveryBoy?.profileImage}

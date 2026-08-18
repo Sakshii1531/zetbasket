@@ -239,9 +239,9 @@ const OrderDetails = () => {
           id: 1,
           label: "Task Accepted",
           action: "NAVIGATE TO CUSTOMER",
-          color: "bg-brand-500",
-          bg: "bg-brand-50",
-          text: "text-brand-600",
+          color: "bg-primary",
+          bg: "bg-sky-50",
+          text: "text-sky-600",
         },
         {
           id: 2,
@@ -263,17 +263,17 @@ const OrderDetails = () => {
           id: 4,
           label: "At Seller",
           action: "SELLER OTP VERIFY",
-          color: "bg-green-600",
-          bg: "bg-green-50",
-          text: "text-green-600",
+          color: "bg-emerald-600",
+          bg: "bg-emerald-50",
+          text: "text-emerald-600",
         },
         {
           id: 5,
           label: "Completed",
           action: "DONE",
-          color: "bg-brand-700",
-          bg: "bg-brand-50",
-          text: "text-brand-700",
+          color: "bg-emerald-700",
+          bg: "bg-emerald-50",
+          text: "text-emerald-700",
         },
       ];
     }
@@ -283,9 +283,9 @@ const OrderDetails = () => {
         id: 1,
         label: "Navigate to Store",
         action: "ARRIVED AT STORE",
-        color: "bg-black ",
-        bg: "bg-brand-50",
-        text: "text-brand-600",
+        color: "bg-slate-900",
+        bg: "bg-slate-100",
+        text: "text-slate-900",
       },
       {
         id: 2,
@@ -299,17 +299,17 @@ const OrderDetails = () => {
         id: 3,
         label: "Start Delivery",
         action: "START DELIVERY",
-        color: "bg-black ",
-        bg: "bg-brand-50",
-        text: "text-brand-600",
+        color: "bg-slate-900",
+        bg: "bg-slate-100",
+        text: "text-slate-900",
       },
       {
         id: 4,
         label: "Delivering",
         action: "DELIVERED",
-        color: "bg-brand-700",
-        bg: "bg-brand-50",
-        text: "text-brand-700",
+        color: "bg-emerald-600",
+        bg: "bg-emerald-50",
+        text: "text-emerald-700",
       },
     ];
   }, [order?.returnStatus]);
@@ -1232,12 +1232,12 @@ const OrderDetails = () => {
               </motion.div>
 
               <motion.div
-                className={`absolute inset-y-0 left-0 ${steps[step - 1].bg} opacity-50`}
+                className={`absolute inset-y-0 left-0 ${steps[step - 1]?.bg || "bg-sky-50"} opacity-50`}
                 style={{ width: dragX + 60 }}
               />
 
               <motion.div
-                className={`absolute top-1 bottom-1 left-1 w-14 rounded-full flex items-center justify-center shadow-md cursor-grab active:cursor-grabbing z-20 ${steps[step - 1].color || "bg-primary"
+                className={`absolute top-1 bottom-1 left-1 w-14 rounded-full flex items-center justify-center shadow-md cursor-grab active:cursor-grabbing z-20 ${steps[step - 1]?.color || "bg-primary"
                   }`}
                 drag="x"
                 dragConstraints={{ left: 0, right: 280 }}

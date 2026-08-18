@@ -80,6 +80,8 @@ const DeliveryRatingModal = ({
       if (response.data?.success) {
         setIsSubmitted(true);
         if (orderId) {
+          localStorage.setItem(`rating_dismissed_${orderId}`, "true");
+          localStorage.setItem(`rating_completed_${orderId}`, "true");
           sessionStorage.setItem(`rating_dismissed_${orderId}`, "true");
           sessionStorage.setItem(`rating_completed_${orderId}`, "true");
         }
@@ -97,6 +99,8 @@ const DeliveryRatingModal = ({
 
       if (isAlreadySubmitted) {
         if (orderId) {
+          localStorage.setItem(`rating_dismissed_${orderId}`, "true");
+          localStorage.setItem(`rating_completed_${orderId}`, "true");
           sessionStorage.setItem(`rating_dismissed_${orderId}`, "true");
           sessionStorage.setItem(`rating_completed_${orderId}`, "true");
         }

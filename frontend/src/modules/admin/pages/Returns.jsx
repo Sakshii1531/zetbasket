@@ -17,6 +17,40 @@ import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Loader2, X } from "lucide-react";
 
+const getListingImageForReturn = (ret) => {
+  if (!ret) return "https://placehold.co/400x400/f8fafc/64748b?text=Original";
+  const returnedItem = ret.returnItems?.[0];
+  if (returnedItem?.image) return returnedItem.image;
+
+  if (Array.isArray(ret.items)) {
+    if (typeof returnedItem?.itemIndex === "number" && ret.items[returnedItem.itemIndex]?.image) {
+      return ret.items[returnedItem.itemIndex].image;
+    }
+    const matched = ret.items.find(
+      (it) => String(it._id || it.id || it.product?._id || it.product) === String(returnedItem?.product?._id || returnedItem?.product)
+    );
+    if (matched?.image) return matched.image;
+    if (matched?.product?.image) return matched.product.image;
+    if (matched?.product?.images?.[0]) return matched.product.images[0];
+    if (ret.items[0]?.image) return ret.items[0].image;
+  }
+  return "https://placehold.co/400x400/f8fafc/64748b?text=Original";
+};
+
+const getProductRefundAmount = (ret) => {
+  if (!ret) return 0;
+  if (typeof ret.returnRefundAmount === "number" && ret.returnRefundAmount > 0) {
+    return ret.returnRefundAmount;
+  }
+  if (Array.isArray(ret.returnItems) && ret.returnItems.length > 0) {
+    return ret.returnItems.reduce(
+      (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
+      0
+    );
+  }
+  return ret.pricing?.subtotal || 0;
+};
+
 const Returns = () => {
   const { showToast } = useToast();
   const [returns, setReturns] = useState([]);
@@ -620,7 +654,7 @@ const Returns = () => {
                     <div className="space-y-1.5 flex flex-col h-full group">
                       <div className="relative aspect-square rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shadow-inner group-hover:border-slate-300 transition-colors">
                         <img
-                          src={selectedReturn.items?.[0]?.image || "https://placehold.co/400x400/f8fafc/64748b?text=Original"}
+                          src={getListingImageForReturn(selectedReturn)}
                           alt="Original"
                           className="h-full w-full object-cover"
                         />
@@ -634,10 +668,10 @@ const Returns = () => {
                     {/* 3. Return Pickup Proof */}
                     <div className="space-y-1.5 flex flex-col h-full group">
                       <div className="relative aspect-square rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shadow-inner group-hover:border-slate-300 transition-colors flex items-center justify-center">
-                        {selectedReturn.returnPickupImages?.[0] ? (
+                        {selectedReturn.returnPickupImages?.[0] || selectedReturn.returnImages?.[0] ? (
                           <img
-                            src={selectedReturn.returnPickupImages[0]}
-                            alt="Return Pickup"
+                            src={selectedReturn.returnPickupImages?.[0] || selectedReturn.returnImages?.[0]}
+                            alt="Return Photo"
                             className="h-full w-full object-cover"
                           />
                         ) : (
@@ -693,7 +727,7 @@ const Returns = () => {
                   <p className="text-xs text-slate-700">
                     Product refund:{" "}
                     <span className="font-black">
-                      {"\u20B9"}{selectedReturn.returnRefundAmount || selectedReturn.pricing?.subtotal || 0}
+                      {"\u20B9"}{getProductRefundAmount(selectedReturn)}
                     </span>
                   </p>
                   <p className="text-xs text-slate-700">
