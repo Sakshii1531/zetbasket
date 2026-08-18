@@ -60,9 +60,13 @@ const EarningsPage = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [earningsData, setEarningsData] = useState({
     totalEarnings: 0,
+    todayEarnings: 0,
+    weeklyEarnings: 0,
     incentives: 0,
+    todayIncentives: 0,
     bonuses: 0,
     tipsReceived: 0,
+    todayTips: 0,
     chartData: [],
     recentTransactions: [],
   });
@@ -75,13 +79,46 @@ const EarningsPage = () => {
       const response = await deliveryApi.getEarnings();
       if (response.data.success && response.data.result) {
         const result = response.data.result;
+        const txns = result.transactions || result.recentTransactions || [];
+
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        sevenDaysAgo.setHours(0, 0, 0, 0);
+
+        const isEarningTxn = (t) =>
+          t.status === "Settled" &&
+          (t.type === "Delivery Earning" || t.type === "Incentive" || t.type === "Bonus");
+
+        const todayTxns = txns.filter((t) => new Date(t.createdAt) >= startOfToday);
+        const weeklyTxns = txns.filter((t) => new Date(t.createdAt) >= sevenDaysAgo);
+
+        const sum = (list) => list.filter(isEarningTxn).reduce((acc, t) => acc + (t.amount || 0), 0);
+        const sumTips = (list) =>
+          list
+            .filter((t) => t.type === "Delivery Earning" && t.status === "Settled")
+            .reduce(
+              (acc, t) =>
+                acc + Number(t?.meta?.tipAmount ?? t?.order?.paymentBreakdown?.riderTipAmount ?? t?.order?.pricing?.tip ?? 0),
+              0,
+            );
+        const sumIncentives = (list) =>
+          list
+            .filter((t) => (t.type === "Incentive" || t.type === "Bonus") && t.status === "Settled")
+            .reduce((acc, t) => acc + (t.amount || 0), 0);
+
         setEarningsData({
           totalEarnings: result.totalEarnings || 0,
+          todayEarnings: sum(todayTxns),
+          weeklyEarnings: sum(weeklyTxns),
           incentives: result.incentives || 0,
+          todayIncentives: sumIncentives(todayTxns),
           bonuses: result.bonuses || 0,
           tipsReceived: result.tipsReceived || 0,
+          todayTips: sumTips(todayTxns),
           chartData: result.chartData || [],
-          recentTransactions: result.transactions || result.recentTransactions || [],
+          recentTransactions: txns,
         });
         if (isManual) toast.success("Earnings updated");
       }
@@ -206,7 +243,7 @@ const EarningsPage = () => {
 
             <div className="flex justify-between items-start mb-2 relative z-10">
               <span className="text-[11px] font-black uppercase tracking-wider text-emerald-200/90 bg-emerald-900/40 px-3 py-1 rounded-full border border-emerald-600/30 backdrop-blur-sm">
-                Total Earnings ({activeTab})
+                {activeTab === "today" ? "Today's Earnings" : activeTab === "weekly" ? "Weekly Earnings" : "Total Earnings"}
               </span>
               <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-300 bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
                 <TrendingUp size={12} /> Live Payouts
@@ -216,7 +253,13 @@ const EarningsPage = () => {
             <div className="flex items-baseline my-3 relative z-10">
               <span className="text-3xl font-extrabold text-emerald-200 mr-1.5">{RUPEE}</span>
               <span className="text-5xl font-black tracking-tight text-white drop-shadow-sm">
-                {Number(earningsData.totalEarnings || 0).toLocaleString()}
+                {Number(
+                  activeTab === "today"
+                    ? earningsData.todayEarnings
+                    : activeTab === "weekly"
+                    ? earningsData.weeklyEarnings
+                    : earningsData.totalEarnings
+                ).toLocaleString()}
               </span>
             </div>
 
@@ -227,7 +270,7 @@ const EarningsPage = () => {
                   <p className="text-emerald-200 text-[11px] font-bold uppercase tracking-wider">Incentives</p>
                 </div>
                 <p className="font-black text-lg text-white">
-                  +{RUPEE}{Number(earningsData.incentives || 0).toLocaleString()}
+                  +{RUPEE}{Number(activeTab === "today" ? earningsData.todayIncentives : earningsData.incentives).toLocaleString()}
                 </p>
               </div>
 
@@ -237,7 +280,7 @@ const EarningsPage = () => {
                   <p className="text-emerald-200 text-[11px] font-bold uppercase tracking-wider">Customer Tips</p>
                 </div>
                 <p className="font-black text-lg text-white">
-                  +{RUPEE}{Number(earningsData.tipsReceived || 0).toLocaleString()}
+                  +{RUPEE}{Number(activeTab === "today" ? earningsData.todayTips : earningsData.tipsReceived).toLocaleString()}
                 </p>
               </div>
             </div>

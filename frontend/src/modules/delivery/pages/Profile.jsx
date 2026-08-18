@@ -32,6 +32,7 @@ const Profile = () => {
   const { settings } = useSettings();
   const appName = settings?.appName || "App";
   const [faqs, setFaqs] = useState([]);
+  const [trips, setTrips] = useState(null);
 
   useEffect(() => {
     if (typeof refreshUser === "function") {
@@ -45,7 +46,19 @@ const Profile = () => {
         console.error("Error fetching FAQs:", error);
       }
     };
+    const fetchStats = async () => {
+      try {
+        const { deliveryApi } = await import('../services/deliveryApi');
+        const res = await deliveryApi.getStats();
+        if (res.data.success && res.data.result) {
+          setTrips(res.data.result.deliveries ?? null);
+        }
+      } catch {
+        // silently ignore
+      }
+    };
     fetchFaqs();
+    fetchStats();
   }, []);
 
   const menuItems = [
@@ -189,24 +202,19 @@ const Profile = () => {
         className="mx-6 -mt-12 bg-white rounded-2xl p-4 shadow-xl mb-6 flex justify-between text-center relative z-10">
         <div className="flex-1">
           <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider">
-            Joined
+            Trips
           </p>
           <p className="font-bold text-gray-900 text-sm mt-0.5">
-            {user?.createdAt
-              ? new Date(user.createdAt).toLocaleDateString("en-US", {
-                  month: "short",
-                  year: "2-digit",
-                })
-              : "Jan '24"}
+            {trips !== null ? trips : "—"}
           </p>
         </div>
         <div className="w-px bg-gray-100"></div>
         <div className="flex-1">
           <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider">
-            Ratings
+            Reviews
           </p>
           <p className="font-bold text-gray-900 text-sm mt-0.5">
-            {user?.ratingCount ? `${user.ratingCount} reviews` : "0 reviews"}
+            {user?.ratingCount ? `${user.ratingCount}` : "—"}
           </p>
         </div>
         <div className="w-px bg-gray-100"></div>
@@ -217,7 +225,7 @@ const Profile = () => {
           <p className="font-bold text-gray-900 text-sm mt-0.5 flex justify-center items-center gap-0.5">
             {user?.ratingAverage && user.ratingAverage > 0
               ? user.ratingAverage.toFixed(1)
-              : "New"}{" "}
+              : "—"}{" "}
             <Star size={14} className="fill-amber-400 text-amber-400 inline" />
           </p>
         </div>

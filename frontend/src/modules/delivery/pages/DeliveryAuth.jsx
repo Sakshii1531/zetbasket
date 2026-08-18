@@ -36,8 +36,8 @@ const DeliveryAuth = () => {
   const navigate = useNavigate();
   const { settings } = useSettings();
   const appName = settings?.appName || "App";
-  const logoUrl = settings?.logoUrl || "";
   const { login } = useAuth();
+  const bottomRef = React.useRef(null);
 
   React.useEffect(() => {
     import('@core/auth/activeRoleStore').then(({ setActiveRole, ROLES }) => {
@@ -65,26 +65,53 @@ const DeliveryAuth = () => {
     sessionStorage.setItem("delivery_auth_login_phone", loginPhone);
   }, [loginPhone]);
 
-  // Signup state
-  const [signupStep, setSignupStep] = useState(1);
-  const [signupName, setSignupName] = useState("");
-  const [signupPhone, setSignupPhone] = useState("");
-  const [signupEmail, setSignupEmail] = useState("");
-  const [signupAddress, setSignupAddress] = useState("");
-  const [signupVehicle, setSignupVehicle] = useState("bike");
-  const [signupVehicleNumber, setSignupVehicleNumber] = useState("");
-  const [signupDLNumber, setSignupDLNumber] = useState("");
-  const [signupPanNumber, setSignupPanNumber] = useState("");
-  const [signupAadharNumber, setSignupAadharNumber] = useState("");
-  const [signupAccountNumber, setSignupAccountNumber] = useState("");
-  const [signupIfsc, setSignupIfsc] = useState("");
-  const [signupAccountHolder, setSignupAccountHolder] = useState("");
-  const [signupPreferredArea, setSignupPreferredArea] = useState("");
-  const [signupDob, setSignupDob] = useState("");
-  const [signupBloodGroup, setSignupBloodGroup] = useState("");
+  // Signup state – all fields restored from sessionStorage on refresh
+  const [signupStep, setSignupStep] = useState(() => parseInt(sessionStorage.getItem("dsup_step") || "1", 10));
+  const [signupName, setSignupName] = useState(() => sessionStorage.getItem("dsup_name") || "");
+  const [signupPhone, setSignupPhone] = useState(() => sessionStorage.getItem("dsup_phone") || "");
+  const [signupEmail, setSignupEmail] = useState(() => sessionStorage.getItem("dsup_email") || "");
+  const [signupAddress, setSignupAddress] = useState(() => sessionStorage.getItem("dsup_address") || "");
+  const [signupVehicle, setSignupVehicle] = useState(() => sessionStorage.getItem("dsup_vehicle") || "bike");
+  const [signupVehicleNumber, setSignupVehicleNumber] = useState(() => sessionStorage.getItem("dsup_vehicleNumber") || "");
+  const [signupDLNumber, setSignupDLNumber] = useState(() => sessionStorage.getItem("dsup_dlNumber") || "");
+  const [signupPanNumber, setSignupPanNumber] = useState(() => sessionStorage.getItem("dsup_pan") || "");
+  const [signupAadharNumber, setSignupAadharNumber] = useState(() => sessionStorage.getItem("dsup_aadhar") || "");
+  const [signupAccountNumber, setSignupAccountNumber] = useState(() => sessionStorage.getItem("dsup_accountNumber") || "");
+  const [signupIfsc, setSignupIfsc] = useState(() => sessionStorage.getItem("dsup_ifsc") || "");
+  const [signupAccountHolder, setSignupAccountHolder] = useState(() => sessionStorage.getItem("dsup_accountHolder") || "");
+  const [signupPreferredArea, setSignupPreferredArea] = useState(() => sessionStorage.getItem("dsup_area") || "");
+  const [signupDob, setSignupDob] = useState(() => sessionStorage.getItem("dsup_dob") || "");
+  const [signupBloodGroup, setSignupBloodGroup] = useState(() => sessionStorage.getItem("dsup_bloodGroup") || "");
   const [showVehicleDropdown, setShowVehicleDropdown] = useState(false);
   const [profileImageFile, setProfileImageFile] = useState(null);
   const [profileImagePreview, setProfileImagePreview] = useState("");
+
+  // Persist signup fields to sessionStorage
+  useEffect(() => { sessionStorage.setItem("dsup_step", signupStep); }, [signupStep]);
+  useEffect(() => { sessionStorage.setItem("dsup_name", signupName); }, [signupName]);
+  useEffect(() => { sessionStorage.setItem("dsup_phone", signupPhone); }, [signupPhone]);
+  useEffect(() => { sessionStorage.setItem("dsup_email", signupEmail); }, [signupEmail]);
+  useEffect(() => { sessionStorage.setItem("dsup_address", signupAddress); }, [signupAddress]);
+  useEffect(() => { sessionStorage.setItem("dsup_vehicle", signupVehicle); }, [signupVehicle]);
+  useEffect(() => { sessionStorage.setItem("dsup_vehicleNumber", signupVehicleNumber); }, [signupVehicleNumber]);
+  useEffect(() => { sessionStorage.setItem("dsup_dlNumber", signupDLNumber); }, [signupDLNumber]);
+  useEffect(() => { sessionStorage.setItem("dsup_pan", signupPanNumber); }, [signupPanNumber]);
+  useEffect(() => { sessionStorage.setItem("dsup_aadhar", signupAadharNumber); }, [signupAadharNumber]);
+  useEffect(() => { sessionStorage.setItem("dsup_accountNumber", signupAccountNumber); }, [signupAccountNumber]);
+  useEffect(() => { sessionStorage.setItem("dsup_ifsc", signupIfsc); }, [signupIfsc]);
+  useEffect(() => { sessionStorage.setItem("dsup_accountHolder", signupAccountHolder); }, [signupAccountHolder]);
+  useEffect(() => { sessionStorage.setItem("dsup_area", signupPreferredArea); }, [signupPreferredArea]);
+  useEffect(() => { sessionStorage.setItem("dsup_dob", signupDob); }, [signupDob]);
+  useEffect(() => { sessionStorage.setItem("dsup_bloodGroup", signupBloodGroup); }, [signupBloodGroup]);
+
+  // Per-field validation errors
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const setFieldError = (field, msg) =>
+    setFieldErrors((prev) => ({ ...prev, [field]: msg }));
+
+  const clearFieldError = (field) =>
+    setFieldErrors((prev) => { const next = { ...prev }; delete next[field]; return next; });
 
   // Document states
   const [aadharFile, setAadharFile] = useState(null);
@@ -348,6 +375,8 @@ const DeliveryAuth = () => {
 
       sessionStorage.removeItem("delivery_auth_mode");
       sessionStorage.removeItem("delivery_auth_login_phone");
+      // Clear persisted signup fields on successful login
+      ["dsup_step","dsup_name","dsup_phone","dsup_email","dsup_address","dsup_vehicle","dsup_vehicleNumber","dsup_dlNumber","dsup_pan","dsup_aadhar","dsup_accountNumber","dsup_ifsc","dsup_accountHolder","dsup_area","dsup_dob","dsup_bloodGroup"].forEach(k => sessionStorage.removeItem(k));
 
       login({ ...delivery, token, role: "delivery" });
 
@@ -404,7 +433,7 @@ const DeliveryAuth = () => {
         className="w-full max-w-[420px] relative z-10 my-auto"
       >
         {/* Card */}
-        <div className="bg-white rounded-[2.5rem] shadow-[0_24px_60px_rgba(99,102,241,0.1)] border border-brand-50 overflow-hidden flex flex-col max-h-[85vh] sm:max-h-[90vh]">
+        <div className="bg-white rounded-[2.5rem] shadow-[0_24px_60px_rgba(99,102,241,0.1)] border border-brand-50 overflow-hidden flex flex-col">
 
           {/* Header with Lottie */}
           <div className="bg-gradient-to-br from-brand-50 to-purple-50 px-5 py-2 sm:px-6 sm:py-3 pb-3 flex flex-col items-center relative shrink-0">
@@ -457,7 +486,7 @@ const DeliveryAuth = () => {
           )}
 
           {/* Form Body */}
-          <div className="p-6 pt-4 overflow-y-auto custom-scrollbar pb-16" data-lenis-prevent>
+          <div className="p-6 pt-4 pb-8" data-lenis-prevent>
             <AnimatePresence mode="wait">
               {step === "form" && (
                 <motion.div
@@ -526,11 +555,17 @@ const DeliveryAuth = () => {
                                     const capitalized = val.replace(/\b\w/g, (c) => c.toUpperCase());
                                     setSignupName(capitalized);
                                   }
+                                  clearFieldError("name");
                                 }}
-                                className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all capitalize"
+                                onBlur={() => {
+                                  if (!signupName.trim() || signupName.trim().length < 3)
+                                    setFieldError("name", "Please enter your full name (min 3 characters)");
+                                }}
+                                className={`w-full pl-11 pr-4 py-3.5 bg-gray-50 border rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all capitalize ${fieldErrors.name ? "border-red-400 focus:border-red-400" : "border-gray-100 focus:border-brand-400"}`}
                                 placeholder="Enter your full name"
                               />
                             </div>
+                            {fieldErrors.name && <p className="text-[10px] text-red-500 font-semibold ml-1 mt-0.5">{fieldErrors.name}</p>}
                           </div>
 
                           <div className="space-y-1.5">
@@ -541,12 +576,17 @@ const DeliveryAuth = () => {
                               <input
                                 type="tel"
                                 value={signupPhone}
-                                onChange={(e) => setSignupPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                                onChange={(e) => { setSignupPhone(e.target.value.replace(/\D/g, "").slice(0, 10)); clearFieldError("phone"); }}
+                                onBlur={() => {
+                                  if (!signupPhone || !/^[6-9]\d{9}$/.test(signupPhone))
+                                    setFieldError("phone", "Enter a valid 10-digit number starting with 6-9");
+                                }}
                                 maxLength={10}
-                                className="w-full pl-24 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
+                                className={`w-full pl-24 pr-4 py-3.5 bg-gray-50 border rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all ${fieldErrors.phone ? "border-red-400 focus:border-red-400" : "border-gray-100 focus:border-brand-400"}`}
                                 placeholder="00000 00000"
                               />
                             </div>
+                            {fieldErrors.phone && <p className="text-[10px] text-red-500 font-semibold ml-1 mt-0.5">{fieldErrors.phone}</p>}
                           </div>
 
                           <div className="space-y-1.5">
@@ -556,11 +596,16 @@ const DeliveryAuth = () => {
                               <input
                                 type="email"
                                 value={signupEmail}
-                                onChange={(e) => setSignupEmail(e.target.value)}
-                                className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
+                                onChange={(e) => { setSignupEmail(e.target.value); clearFieldError("email"); }}
+                                onBlur={() => {
+                                  if (!signupEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupEmail.trim()))
+                                    setFieldError("email", "Enter a valid email address");
+                                }}
+                                className={`w-full pl-11 pr-4 py-3.5 bg-gray-50 border rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all ${fieldErrors.email ? "border-red-400 focus:border-red-400" : "border-gray-100 focus:border-brand-400"}`}
                                 placeholder="example@gmail.com"
                               />
                             </div>
+                            {fieldErrors.email && <p className="text-[10px] text-red-500 font-semibold ml-1 mt-0.5">{fieldErrors.email}</p>}
                           </div>
 
                           <div className="space-y-1.5">
@@ -573,12 +618,18 @@ const DeliveryAuth = () => {
                                   const val = e.target.value;
                                   if (/^[a-zA-Z0-9\s,.\-/#]*$/.test(val)) {
                                     setSignupAddress(val);
+                                    clearFieldError("address");
                                   }
                                 }}
-                                className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all resize-none h-24"
+                                onBlur={() => {
+                                  if (!signupAddress.trim() || signupAddress.trim().length < 10)
+                                    setFieldError("address", "Enter your complete address (min 10 characters)");
+                                }}
+                                className={`w-full pl-11 pr-4 py-3.5 bg-gray-50 border rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all resize-none h-24 ${fieldErrors.address ? "border-red-400 focus:border-red-400" : "border-gray-100 focus:border-brand-400"}`}
                                 placeholder="Complete building address..."
                               />
                             </div>
+                            {fieldErrors.address && <p className="text-[10px] text-red-500 font-semibold ml-1 mt-0.5">{fieldErrors.address}</p>}
                           </div>
 
                           <div className="flex items-center gap-3">
@@ -597,10 +648,24 @@ const DeliveryAuth = () => {
                                       return;
                                     }
                                     setSignupDob(selectedDate);
+                                    clearFieldError("dob");
                                   }}
-                                  className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
+                                  onBlur={() => {
+                                    if (!signupDob) {
+                                      setFieldError("dob", "Please select your date of birth");
+                                    } else {
+                                      const dobDate = new Date(signupDob);
+                                      const todayDate = new Date();
+                                      let age = todayDate.getFullYear() - dobDate.getFullYear();
+                                      const m = todayDate.getMonth() - dobDate.getMonth();
+                                      if (m < 0 || (m === 0 && todayDate.getDate() < dobDate.getDate())) age--;
+                                      if (age < 18) setFieldError("dob", "You must be at least 18 years old");
+                                    }
+                                  }}
+                                  className={`w-full px-4 py-3.5 bg-gray-50 border rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all ${fieldErrors.dob ? "border-red-400 focus:border-red-400" : "border-gray-100 focus:border-brand-400"}`}
                                 />
                               </div>
+                              {fieldErrors.dob && <p className="text-[10px] text-red-500 font-semibold ml-1 mt-0.5">{fieldErrors.dob}</p>}
                             </div>
                             <div className="space-y-1.5 flex-1">
                               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-1">
@@ -635,7 +700,16 @@ const DeliveryAuth = () => {
                               <input
                                 type="text"
                                 value={signupPreferredArea}
-                                onChange={(e) => setSignupPreferredArea(e.target.value)}
+                                onFocus={() => {
+                                  setTimeout(() => {
+                                    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+                                  }, 150);
+                                }}
+                                onChange={(e) => {
+                                  setSignupPreferredArea(e.target.value);
+                                  sessionStorage.setItem("signupPreferredArea", e.target.value);
+                                  bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+                                }}
                                 className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
                                 placeholder="E.g. Downtown, North Side, etc."
                               />
@@ -694,6 +768,7 @@ const DeliveryAuth = () => {
                           >
                             Next Step <ArrowRight className="w-4 h-4" />
                           </button>
+                          <div ref={bottomRef} className="h-1" />
                         </motion.div>
                       )}
 
@@ -727,7 +802,11 @@ const DeliveryAuth = () => {
                                     {VEHICLE_TYPES.map((v) => (
                                       <button
                                         key={v.value}
-                                        onClick={() => { setSignupVehicle(v.value); setShowVehicleDropdown(false); }}
+                                        onClick={() => { 
+                                          setSignupVehicle(v.value); 
+                                          sessionStorage.setItem("signupVehicle", v.value);
+                                          setShowVehicleDropdown(false); 
+                                        }}
                                         className="w-full px-4 py-3 text-sm font-bold text-left hover:bg-brand-50 transition-colors"
                                       >
                                         {v.label}
@@ -749,11 +828,23 @@ const DeliveryAuth = () => {
                                 type="text"
                                 maxLength={15}
                                 value={signupVehicleNumber}
-                                onChange={(e) => setSignupVehicleNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9\s-]/g, ''))}
-                                className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
+                                onChange={(e) => { 
+                                  const val = e.target.value.toUpperCase().replace(/[^A-Z0-9\s-]/g, '');
+                                  setSignupVehicleNumber(val); 
+                                  sessionStorage.setItem("signupVehicleNumber", val);
+                                  clearFieldError("vehicleNumber"); 
+                                }}
+                                onBlur={() => {
+                                  if (!signupVehicleNumber)
+                                    setFieldError("vehicleNumber", "Please enter your vehicle plate number");
+                                  else if (!/^[A-Z]{2}\s?[0-9]{1,2}\s?[A-Z]{0,3}\s?[0-9]{1,4}$/.test(signupVehicleNumber.trim()))
+                                    setFieldError("vehicleNumber", "Invalid plate number (e.g. KA 05 MN 8921)");
+                                }}
+                                className={`w-full pl-11 pr-4 py-3.5 bg-gray-50 border rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all ${fieldErrors.vehicleNumber ? "border-red-400 focus:border-red-400" : "border-gray-100 focus:border-brand-400"}`}
                                 placeholder="KA 05 MN 8921"
                               />
                             </div>
+                            {fieldErrors.vehicleNumber && <p className="text-[10px] text-red-500 font-semibold ml-1 mt-0.5">{fieldErrors.vehicleNumber}</p>}
                           </div>
 
                           <div className="space-y-1.5">
@@ -764,11 +855,23 @@ const DeliveryAuth = () => {
                                 type="text"
                                 maxLength={16}
                                 value={signupDLNumber}
-                                onChange={(e) => setSignupDLNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9\s-]/g, ''))}
-                                className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
+                                onChange={(e) => { 
+                                  const val = e.target.value.toUpperCase().replace(/[^A-Z0-9\s-]/g, '');
+                                  setSignupDLNumber(val); 
+                                  sessionStorage.setItem("signupDLNumber", val);
+                                  clearFieldError("dlNumber"); 
+                                }}
+                                onBlur={() => {
+                                  if (!signupDLNumber)
+                                    setFieldError("dlNumber", "Please enter your driving license number");
+                                  else if (!/^[A-Z]{2}[0-9]{13}$/.test(signupDLNumber.replace(/[\s-]/g, '').trim()))
+                                    setFieldError("dlNumber", "Invalid DL number (e.g. DL1420110012345)");
+                                }}
+                                className={`w-full pl-11 pr-4 py-3.5 bg-gray-50 border rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all ${fieldErrors.dlNumber ? "border-red-400 focus:border-red-400" : "border-gray-100 focus:border-brand-400"}`}
                                 placeholder="DL-1420110012345"
                               />
                             </div>
+                            {fieldErrors.dlNumber && <p className="text-[10px] text-red-500 font-semibold ml-1 mt-0.5">{fieldErrors.dlNumber}</p>}
                           </div>
                           </>
                           )}
@@ -822,10 +925,20 @@ const DeliveryAuth = () => {
                             <input
                               type="text"
                               value={signupAadharNumber}
-                              onChange={(e) => setSignupAadharNumber(e.target.value.replace(/\D/g, "").slice(0, 12))}
-                              className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all font-mono"
+                              onChange={(e) => { 
+                                const val = e.target.value.replace(/\D/g, "").slice(0, 12);
+                                setSignupAadharNumber(val); 
+                                sessionStorage.setItem("signupAadharNumber", val);
+                                clearFieldError("aadhar"); 
+                              }}
+                              onBlur={() => {
+                                if (!signupAadharNumber || signupAadharNumber.length !== 12)
+                                  setFieldError("aadhar", "Enter a valid 12-digit Aadhar number");
+                              }}
+                              className={`w-full px-4 py-3.5 bg-gray-50 border rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all font-mono ${fieldErrors.aadhar ? "border-red-400 focus:border-red-400" : "border-gray-100 focus:border-brand-400"}`}
                               placeholder="0000 0000 0000"
                             />
+                            {fieldErrors.aadhar && <p className="text-[10px] text-red-500 font-semibold ml-1 mt-0.5">{fieldErrors.aadhar}</p>}
                           </div>
                           <div className="space-y-1.5">
                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">PAN Card Number</label>
@@ -833,30 +946,50 @@ const DeliveryAuth = () => {
                               type="text"
                               maxLength={10}
                               value={signupPanNumber}
-                              onChange={(e) => setSignupPanNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                              onBlur={(e) => {
-                                if (e.target.value && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(e.target.value)) {
-                                  toast.error("Invalid PAN format (e.g. ABCDE1234F)");
-                                }
+                              onChange={(e) => { 
+                                const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                                setSignupPanNumber(val); 
+                                sessionStorage.setItem("signupPanNumber", val);
+                                clearFieldError("pan"); 
                               }}
-                              className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all font-mono"
+                              onBlur={(e) => {
+                                if (!e.target.value)
+                                  setFieldError("pan", "Please enter your PAN card number");
+                                else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(e.target.value))
+                                  setFieldError("pan", "Invalid PAN format (e.g. ABCDE1234F)");
+                              }}
+                              className={`w-full px-4 py-3.5 bg-gray-50 border rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all font-mono ${fieldErrors.pan ? "border-red-400 focus:border-red-400" : "border-gray-100 focus:border-brand-400"}`}
                               placeholder="ABCDE1234F"
                             />
+                            {fieldErrors.pan && <p className="text-[10px] text-red-500 font-semibold ml-1 mt-0.5">{fieldErrors.pan}</p>}
                           </div>
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Account Holder Name</label>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Account Holder Name <span className="normal-case text-[9px] font-normal">(First &amp; Last name)</span></label>
                             <input
                               type="text"
                               value={signupAccountHolder}
                               onChange={(e) => {
-                                const val = e.target.value.toUpperCase();
-                                if (/^[A-Z\s]*$/.test(val)) {
+                                const val = e.target.value;
+                                if (/^[a-zA-Z\s]*$/.test(val)) {
                                   setSignupAccountHolder(val);
+                                  sessionStorage.setItem("signupAccountHolder", val);
+                                  clearFieldError("accountHolder");
                                 }
                               }}
-                              className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
-                              placeholder="AS PER BANK RECORDS"
+                              onBlur={() => {
+                                const trimmed = signupAccountHolder.trim();
+                                const parts = trimmed.split(/\s+/).filter(Boolean);
+                                if (!trimmed)
+                                  setFieldError("accountHolder", "Account holder name is required");
+                                else if (parts.length < 2)
+                                  setFieldError("accountHolder", "Please enter both first and last name");
+                                else if (trimmed.length < 5)
+                                  setFieldError("accountHolder", "Name is too short");
+                              }}
+                              className={`w-full px-4 py-3.5 bg-gray-50 border rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all ${fieldErrors.accountHolder ? "border-red-400 focus:border-red-400" : "border-gray-100 focus:border-brand-400"}`}
+                              placeholder="First Name Last Name"
                             />
+                            {fieldErrors.accountHolder && <p className="text-[10px] text-red-500 font-semibold ml-1 mt-0.5">{fieldErrors.accountHolder}</p>}
                           </div>
                           <div className="space-y-1.5">
                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Account Number</label>
@@ -864,10 +997,20 @@ const DeliveryAuth = () => {
                               type="text"
                               maxLength={18}
                               value={signupAccountNumber}
-                              onChange={(e) => setSignupAccountNumber(e.target.value.replace(/\D/g, ""))}
-                              className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
+                              onChange={(e) => { 
+                                const val = e.target.value.replace(/\D/g, "");
+                                setSignupAccountNumber(val); 
+                                sessionStorage.setItem("signupAccountNumber", val);
+                                clearFieldError("accountNumber"); 
+                              }}
+                              onBlur={() => {
+                                if (!signupAccountNumber || signupAccountNumber.length < 9 || signupAccountNumber.length > 18)
+                                  setFieldError("accountNumber", "Enter a valid account number (9–18 digits)");
+                              }}
+                              className={`w-full px-4 py-3.5 bg-gray-50 border rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all ${fieldErrors.accountNumber ? "border-red-400 focus:border-red-400" : "border-gray-100 focus:border-brand-400"}`}
                               placeholder="000000000000"
                             />
+                            {fieldErrors.accountNumber && <p className="text-[10px] text-red-500 font-semibold ml-1 mt-0.5">{fieldErrors.accountNumber}</p>}
                           </div>
                           <div className="space-y-1.5">
                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">IFSC Code</label>
@@ -875,15 +1018,22 @@ const DeliveryAuth = () => {
                               type="text"
                               maxLength={11}
                               value={signupIfsc}
-                              onChange={(e) => setSignupIfsc(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                              onBlur={(e) => {
-                                if (e.target.value && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(e.target.value)) {
-                                  toast.error("Invalid IFSC format (e.g. HDFC0001234)");
-                                }
+                              onChange={(e) => { 
+                                const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                                setSignupIfsc(val); 
+                                sessionStorage.setItem("signupIfsc", val);
+                                clearFieldError("ifsc"); 
                               }}
-                              className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
+                              onBlur={(e) => {
+                                if (!e.target.value)
+                                  setFieldError("ifsc", "Please enter your IFSC code");
+                                else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(e.target.value))
+                                  setFieldError("ifsc", "Invalid IFSC format (e.g. HDFC0001234)");
+                              }}
+                              className={`w-full px-4 py-3.5 bg-gray-50 border rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all ${fieldErrors.ifsc ? "border-red-400 focus:border-red-400" : "border-gray-100 focus:border-brand-400"}`}
                               placeholder="HDFC0001234"
                             />
+                            {fieldErrors.ifsc && <p className="text-[10px] text-red-500 font-semibold ml-1 mt-0.5">{fieldErrors.ifsc}</p>}
                           </div>
 
                           <div className="flex gap-4 pt-2">
@@ -903,8 +1053,9 @@ const DeliveryAuth = () => {
                                   toast.error("Please enter a valid 10-character PAN card number (e.g. ABCDE1234F)");
                                   return;
                                 }
-                                if (!signupAccountHolder.trim() || signupAccountHolder.trim().length < 3) {
-                                  toast.error("Please enter the bank account holder name (minimum 3 characters)");
+                                const holderParts = signupAccountHolder.trim().split(/\s+/).filter(Boolean);
+                                if (!signupAccountHolder.trim() || holderParts.length < 2) {
+                                  toast.error("Please enter the account holder's first and last name");
                                   return;
                                 }
                                 if (!signupAccountNumber || signupAccountNumber.length < 9 || signupAccountNumber.length > 18) {
@@ -1040,12 +1191,18 @@ const DeliveryAuth = () => {
                             onChange={(e) => {
                               const val = e.target.value.replace(/\D/g, "").slice(0, 10);
                               setLoginPhone(val);
+                              clearFieldError("loginPhone");
+                            }}
+                            onBlur={() => {
+                              if (!loginPhone || !/^[6-9]\d{9}$/.test(loginPhone))
+                                setFieldError("loginPhone", "Enter a valid 10-digit number starting with 6-9");
                             }}
                             maxLength={10}
-                            className="w-full pl-24 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all placeholder:text-gray-300"
+                            className={`w-full pl-24 pr-4 py-3.5 bg-gray-50 border rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all placeholder:text-gray-300 ${fieldErrors.loginPhone ? "border-red-400 focus:border-red-400" : "border-gray-100 focus:border-brand-400"}`}
                             placeholder="00000 00000"
                           />
                         </div>
+                        {fieldErrors.loginPhone && <p className="text-[10px] text-red-500 font-semibold ml-1 mt-0.5">{fieldErrors.loginPhone}</p>}
                       </div>
 
                       <button

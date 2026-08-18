@@ -85,8 +85,8 @@ const Auth = () => {
 
 
   const [formData, setFormData] = useState({
-    email: "seller123@gmail.com",
-    password: "seller123",
+    email: "",
+    password: "",
     name: "",
     shopName: "",
     phone: "",
@@ -586,19 +586,6 @@ const Auth = () => {
           className="w-full md:w-[55%] min-h-0 p-8 pt-12 md:p-12 md:pt-16 flex flex-col justify-center bg-white overflow-y-auto overscroll-contain touch-pan-y custom-scrollbar relative"
           onWheelCapture={handlePanelWheel}
           style={{ WebkitOverflowScrolling: "touch" }}>
-          <div className="hidden md:flex absolute top-8 right-8 z-20">
-            <div className="w-20 h-20 rounded-2xl bg-slate-50 border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden">
-              {logoUrl ? (
-                <img
-                  src={logoUrl}
-                  alt={`${appName} logo`}
-                  className="w-14 h-14 object-contain"
-                />
-              ) : (
-                <Store size={30} className="text-slate-700" />
-              )}
-            </div>
-          </div>
           <AnimatePresence mode="wait">
             <motion.div
               key={isLogin ? "login" : `signup-step-${signupStep}`}
@@ -608,11 +595,24 @@ const Auth = () => {
               transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
               className="space-y-8 py-4 md:py-6">
               <div className="space-y-4">
-                <span className="inline-block px-4 py-1 bg-slate-100 text-slate-800 rounded-full text-[10px] font-black uppercase tracking-widest border border-slate-200">
-                  {isLogin
-                    ? "Welcome Back"
-                    : `New Partnership - Step ${signupStep} of 3`}
-                </span>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="inline-block px-4 py-1 bg-slate-100 text-slate-800 rounded-full text-[10px] font-black uppercase tracking-widest border border-slate-200 whitespace-nowrap shrink-0">
+                    {isLogin
+                      ? "Welcome Back"
+                      : `New Partnership - Step ${signupStep} of 3`}
+                  </span>
+                  <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden shrink-0">
+                    {logoUrl ? (
+                      <img
+                        src={logoUrl}
+                        alt={`${appName} logo`}
+                        className="w-12 h-12 object-contain"
+                      />
+                    ) : (
+                      <Store size={28} className="text-slate-700" />
+                    )}
+                  </div>
+                </div>
                 <h1 className="text-3xl font-black text-slate-900 tracking-tighter">
                   Seller{" "}
                   <span className="text-slate-900">
@@ -830,7 +830,7 @@ const Auth = () => {
                       )}
                     </div>
                     {!isLogin && verifications.email.isOtpVisible && verifications.email.status !== "verified" && (
-                      <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                      <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 overflow-hidden">
                         <input
                           type="text"
                           inputMode="numeric"
@@ -842,13 +842,13 @@ const Auth = () => {
                               otp: e.target.value.replace(/\D/g, "").slice(0, 4),
                             })
                           }
-                          className="flex-1 bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-slate-400"
+                          className="flex-1 min-w-0 bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-slate-400"
                         />
                         <button
                           type="button"
                           onClick={() => handleVerifyOtp("email")}
                           disabled={verifications.email.isVerifying || verifications.email.otp.length !== 4}
-                          className="rounded-md bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 disabled:opacity-50"
+                          className="shrink-0 whitespace-nowrap rounded-md bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 disabled:opacity-50"
                         >
                           {verifications.email.isVerifying ? "Checking..." : "Confirm OTP"}
                         </button>
@@ -902,7 +902,7 @@ const Auth = () => {
                           </button>
                         </div>
                         {verifications.phone.isOtpVisible && verifications.phone.status !== "verified" && (
-                          <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                          <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 overflow-hidden">
                             <input
                               type="text"
                               inputMode="numeric"
@@ -914,13 +914,13 @@ const Auth = () => {
                                   otp: e.target.value.replace(/\D/g, "").slice(0, 4),
                                 })
                               }
-                              className="flex-1 bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-slate-400"
+                              className="flex-1 min-w-0 bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-slate-400"
                             />
                             <button
                               type="button"
                               onClick={() => handleVerifyOtp("phone")}
                               disabled={verifications.phone.isVerifying || verifications.phone.otp.length !== 4}
-                              className="rounded-md bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 disabled:opacity-50"
+                              className="shrink-0 whitespace-nowrap rounded-md bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 disabled:opacity-50"
                             >
                               {verifications.phone.isVerifying ? "Checking..." : "Confirm OTP"}
                             </button>
@@ -1198,8 +1198,10 @@ const Auth = () => {
       </motion.div>
 
       {/* Bottom Tagline */}
-      <div className="absolute bottom-6 flex items-center gap-4 text-slate-300 text-[10px] font-black uppercase tracking-[6px]">
-        Empowering Business Digitalization
+      <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center text-center px-4 pointer-events-none z-10">
+        <span className="text-slate-400 text-[9px] sm:text-[10px] font-black uppercase tracking-[2px] sm:tracking-[4px] truncate max-w-[90vw]">
+          Empowering Business Digitalization
+        </span>
       </div>
 
       {isMapOpen && (

@@ -426,13 +426,13 @@ const Dashboard = () => {
                     </div>
                     
                     <div className="space-y-2 mb-5">
-                      <div className="flex items-center text-xs text-gray-600">
-                        <MapPin size={12} className="mr-2 text-gray-400" />
-                        <span className="truncate">{order.seller?.shopName || "Store"}</span>
+                      <div className="flex items-center text-xs text-gray-700 font-bold">
+                        <MapPin size={13} className="mr-2 text-emerald-600 shrink-0" />
+                        <span className="truncate">Pickup: {order.address?.address || order.address?.fullAddress || order.address?.street || "Customer Location"}</span>
                       </div>
-                      <div className="flex items-center text-[11px] text-gray-500 font-medium">
-                        <Package size={12} className="mr-2 text-gray-400" />
-                        <span>Pickup from Customer & Return to Store</span>
+                      <div className="flex items-center text-xs text-gray-500 font-medium">
+                        <MapPin size={13} className="mr-2 text-rose-500 shrink-0" />
+                        <span className="truncate">Return: {order.seller?.shopName || "Store"}</span>
                       </div>
                     </div>
 

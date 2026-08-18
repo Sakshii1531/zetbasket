@@ -30,6 +30,134 @@ function secondsLeftUntilDeliveryExpiry(expiresAt) {
   return Math.max(0, Math.ceil(ms / 1000));
 }
 
+const extractAddressString = (addr) => {
+  if (!addr) return "";
+  if (typeof addr === "string") return addr.trim();
+  if (typeof addr === "object") {
+    if (typeof addr.address === "string" && addr.address.trim()) return addr.address.trim();
+    if (typeof addr.fullAddress === "string" && addr.fullAddress.trim()) return addr.fullAddress.trim();
+    if (typeof addr.street === "string" && addr.street.trim()) return addr.street.trim();
+    const parts = [
+      addr.houseNo || addr.flatNo || addr.building || addr.street,
+      addr.area || addr.landmark,
+      addr.city,
+      addr.pincode || addr.zipCode
+    ].filter(Boolean);
+    if (parts.length > 0) return parts.join(", ");
+  }
+  return "";
+};
+
+const resolveOrderAddresses = (obj, isReturnPickup) => {
+  let pickup = "";
+  let drop = "";
+
+  if (isReturnPickup) {
+    // Return Pickup: Customer Pickup -> Customer Address, Return -> Seller Store
+    const custAddr = 
+      (typeof obj.preview?.pickup === "string" && obj.preview.pickup !== "Customer Address" ? obj.preview.pickup : "") ||
+      (typeof obj.preview?.customerAddress === "string" ? obj.preview.customerAddress : "") ||
+      extractAddressString(obj.address) ||
+      extractAddressString(obj.deliveryAddress) ||
+      extractAddressString(obj.shippingAddress) ||
+      (typeof obj.pickup === "string" ? obj.pickup : "") ||
+      "Customer Address";
+
+    const sellerAddr = 
+      (typeof obj.preview?.drop === "string" && obj.preview.drop !== "Seller Store" ? obj.preview.drop : "") ||
+      (typeof obj.preview?.dropAddress === "string" ? obj.preview.dropAddress : "") ||
+      obj.seller?.shopName ||
+      obj.seller?.name ||
+      extractAddressString(obj.seller?.address) ||
+      (typeof obj.drop === "string" ? obj.drop : "") ||
+      "Seller Store";
+
+    pickup = custAddr;
+    drop = sellerAddr;
+  } else {
+    // Normal Order: Pickup -> Seller Store, Drop -> Customer Address
+    const sellerAddr = 
+      (typeof obj.preview?.pickup === "string" ? obj.preview.pickup : "") ||
+      obj.seller?.shopName ||
+      obj.seller?.name ||
+      extractAddressString(obj.seller?.address) ||
+      (typeof obj.pickup === "string" ? obj.pickup : "") ||
+      "Store Location";
+
+    const custAddr = 
+      (typeof obj.preview?.drop === "string" ? obj.preview.drop : "") ||
+      extractAddressString(obj.address) ||
+      extractAddressString(obj.deliveryAddress) ||
+      extractAddressString(obj.shippingAddress) ||
+      (typeof obj.drop === "string" ? obj.drop : "") ||
+      "Customer Location";
+
+    pickup = sellerAddr;
+    drop = custAddr;
+  }
+
+  return { pickup, drop };
+};
+
+const extractOrderValueAndDiscount = (payloadOrOrder) => {
+  const p = payloadOrOrder.preview || {};
+  const pricing = payloadOrOrder.pricing || {};
+  const pb = payloadOrOrder.paymentBreakdown || {};
+
+  const total = typeof p.total === "number" ? p.total : (pricing.total ?? pb.grandTotal ?? (Number(p.total) || 0));
+  const rawSubtotal = pricing.subtotal ?? pb.subtotal ?? pb.itemTotal ?? total;
+  const couponDiscount = pricing.discount ?? pricing.couponDiscount ?? pb.discountTotal ?? pb.couponDiscount ?? payloadOrOrder.couponSnapshot?.discountAmountApplied ?? 0;
+  const couponCode = payloadOrOrder.coupon?.code || payloadOrOrder.couponSnapshot?.code || "";
+  const subtotal = rawSubtotal > total ? rawSubtotal : (total + couponDiscount);
+
+  return { total, subtotal, couponDiscount, couponCode };
+};
+
+let synthInterval = null;
+let audioCtx = null;
+
+const playRingtoneChime = () => {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    if (!audioCtx) audioCtx = new Ctx();
+    if (audioCtx.state === "suspended") {
+      audioCtx.resume();
+    }
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.3);
+
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.4);
+  } catch (e) {
+    /* ignore synth errors */
+  }
+};
+
+const startWebAudioBeepRingtone = () => {
+  if (synthInterval) return;
+  playRingtoneChime();
+  synthInterval = setInterval(() => {
+    playRingtoneChime();
+  }, 800);
+};
+
+const stopWebAudioBeepRingtone = () => {
+  if (synthInterval) {
+    clearInterval(synthInterval);
+    synthInterval = null;
+  }
+};
+
 const DeliveryLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -50,6 +178,31 @@ const DeliveryLayout = () => {
   const orderRingtoneRef = useRef(null);
   const ringtoneRetryTimerRef = useRef(null);
   const ringtoneUnlockHandlerRef = useRef(null);
+
+  useEffect(() => {
+    const unlockAudio = () => {
+      const audio = getOrderRingtone();
+      audio.play().then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+      }).catch(() => {});
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (Ctx) {
+        if (!audioCtx) audioCtx = new Ctx();
+        if (audioCtx.state === "suspended") audioCtx.resume();
+      }
+    };
+
+    window.addEventListener("pointerdown", unlockAudio, { once: true });
+    window.addEventListener("touchstart", unlockAudio, { once: true });
+    window.addEventListener("keydown", unlockAudio, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlockAudio);
+      window.removeEventListener("touchstart", unlockAudio);
+      window.removeEventListener("keydown", unlockAudio);
+    };
+  }, []);
+
   useEffect(() => {
     const handleFocusIn = (e) => {
       const target = e.target;
@@ -84,14 +237,28 @@ const DeliveryLayout = () => {
     audio.preload = "auto";
     audio.muted = false;
     audio.volume = 1;
-    audio.play().catch(() => { });
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        startWebAudioBeepRingtone();
+      });
+    }
+
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      try {
+        navigator.vibrate([400, 200, 400, 200, 400]);
+      } catch (e) {}
+    }
 
     if (!ringtoneRetryTimerRef.current) {
       ringtoneRetryTimerRef.current = setInterval(() => {
         if (!activeOrderRef.current) return;
         const currentAudio = getOrderRingtone();
-        if (!currentAudio.paused) return;
-        currentAudio.play().catch(() => { });
+        if (currentAudio.paused) {
+          currentAudio.play().catch(() => {
+            startWebAudioBeepRingtone();
+          });
+        }
       }, 1200);
     }
 
@@ -103,8 +270,11 @@ const DeliveryLayout = () => {
       const unlockPlayback = () => {
         if (!activeOrderRef.current) return;
         const currentAudio = getOrderRingtone();
-        if (!currentAudio.paused) return;
-        currentAudio.play().catch(() => { });
+        if (currentAudio.paused) {
+          currentAudio.play().catch(() => {
+            startWebAudioBeepRingtone();
+          });
+        }
       };
       ringtoneUnlockHandlerRef.current = unlockPlayback;
       window.addEventListener("focus", unlockPlayback);
@@ -116,6 +286,7 @@ const DeliveryLayout = () => {
   };
 
   const stopOrderRingtone = () => {
+    stopWebAudioBeepRingtone();
     const audio = orderRingtoneRef.current;
     if (ringtoneRetryTimerRef.current) {
       clearInterval(ringtoneRetryTimerRef.current);
@@ -157,34 +328,31 @@ const DeliveryLayout = () => {
     if (!payload?.orderId) return false;
     if (activeOrderRef.current) return true;
     if (shownOrderIdsRef.current.has(payload.orderId)) return true;
-    const p = payload.preview;
-    if (
-      !p ||
-      typeof p.pickup !== "string" ||
-      (typeof p.drop !== "string" && typeof p.drop !== "number") ||
-      String(p.drop).trim() === ""
-    ) {
-      return false;
-    }
     const exp = payload.deliverySearchExpiresAt;
     if (exp && secondsLeftUntilDeliveryExpiry(exp) <= 0) {
       return false;
     }
     shownOrderIdsRef.current = new Set(shownOrderIdsRef.current).add(payload.orderId);
-    const total = typeof p.total === "number" ? p.total : Number(p.total) || 0;
-    const dropLabel = typeof p.drop === "string" ? p.drop : String(p.drop);
-    const earnings = typeof p.earnings === "number" ? p.earnings : (payload.paymentBreakdown?.riderPayoutTotal ?? Math.round(total * 0.1));
+
+    const isReturnPickup = payload.type === "RETURN_PICKUP" || payload.isReturnPickup === true;
+    const { pickup, drop } = resolveOrderAddresses(payload, isReturnPickup);
+    const { total, subtotal, couponDiscount, couponCode } = extractOrderValueAndDiscount(payload);
+    const earnings = typeof payload.preview?.earnings === "number" ? payload.preview.earnings : (payload.paymentBreakdown?.riderPayoutTotal ?? Math.round(total * 0.1));
+
     setActiveOrder({
       id: payload.orderId,
-      mongoId: undefined,
-      pickup: p.pickup,
-      drop: dropLabel,
+      mongoId: payload._id,
+      pickup,
+      drop,
       distance: "Nearby",
       estTime: "10-15 min",
       value: total,
+      subtotal,
+      couponDiscount,
+      couponCode,
       earnings: earnings,
       expiresAt: payload.deliverySearchExpiresAt || new Date(Date.now() + 60000).toISOString(),
-      isReturnPickup: payload.type === "RETURN_PICKUP" || payload.isReturnPickup === true,
+      isReturnPickup,
       items: payload.items || [],
     });
     return true;
@@ -205,21 +373,23 @@ const DeliveryLayout = () => {
     });
     if (!newOrder) return;
     shownOrderIdsRef.current = new Set(shownOrderIdsRef.current).add(newOrder.orderId);
-    const total = newOrder.pricing?.total || 0;
     const isReturnPickup = newOrder.isReturnPickup || false;
+
+    const { pickup, drop } = resolveOrderAddresses(newOrder, isReturnPickup);
+    const { total, subtotal, couponDiscount, couponCode } = extractOrderValueAndDiscount(newOrder);
     const earnings = newOrder.paymentBreakdown?.riderPayoutTotal ?? newOrder.riderEarnings ?? Math.round(total * 0.1);
+
     setActiveOrder({
       id: newOrder.orderId,
       mongoId: newOrder._id,
-      pickup: isReturnPickup
-        ? newOrder.address?.address || "Customer Address"
-        : newOrder.seller?.shopName || "Seller",
-      drop: isReturnPickup
-        ? newOrder.seller?.shopName || "Seller Store"
-        : newOrder.address?.address || "Customer Address",
+      pickup,
+      drop,
       distance: "Nearby",
       estTime: "10-15 min",
       value: total,
+      subtotal,
+      couponDiscount,
+      couponCode,
       earnings: earnings,
       expiresAt: newOrder.deliverySearchExpiresAt || new Date(Date.now() + 60000).toISOString(),
       isReturnPickup,
@@ -878,9 +1048,27 @@ const DeliveryLayout = () => {
                         <MapPin className="h-5 w-5 text-rose-500 mt-1 shrink-0" />
                         <div>
                           <p className="text-[10px] font-bold text-slate-400 uppercase">
-                            {activeOrder.isReturnPickup ? "Return To Seller" : "Drop"}
+                            {activeOrder.isReturnPickup ? "Return To Seller" : "Drop Location"}
                           </p>
-                          <p className="text-sm font-bold text-slate-900 line-clamp-2">{activeOrder.drop}</p>
+                          <p className="text-sm font-bold text-slate-900 line-clamp-2">{activeOrder.drop || "Customer Location"}</p>
+                        </div>
+                      </div>
+
+                      {/* Order Value & Coupon Discount breakdown */}
+                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-1.5">
+                        <div className="flex justify-between items-center text-xs text-slate-600">
+                          <span className="font-medium">Actual Order Amount:</span>
+                          <span className="font-bold text-slate-900">₹{activeOrder.subtotal || activeOrder.value}</span>
+                        </div>
+                        {activeOrder.couponDiscount > 0 && (
+                          <div className="flex justify-between items-center text-xs text-emerald-600 font-bold">
+                            <span>Coupon Discount{activeOrder.couponCode ? ` (${activeOrder.couponCode})` : ""}:</span>
+                            <span>-₹{activeOrder.couponDiscount}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center text-xs font-black text-slate-900 border-t border-slate-200/60 pt-1.5 mt-1">
+                          <span>Payable Amount:</span>
+                          <span className="text-brand-600 font-black">₹{activeOrder.value}</span>
                         </div>
                       </div>
                     </div>

@@ -1079,18 +1079,6 @@ const OrderDetails = () => {
           </AnimatePresence>
         </Card>
 
-        <motion.div
-          className="bg-yellow-50 rounded-2xl p-4 border border-yellow-200 flex items-start shadow-sm"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <AlertTriangle className="text-yellow-600 mr-3 mt-0.5 flex-shrink-0" size={18} />
-          <p className="text-sm text-yellow-800 leading-relaxed">
-            <strong>Note:</strong> Handle eggs with care. Call customer if location is hard to find.
-          </p>
-        </motion.div>
-
         {/* Return Step 2: Upload proof then request customer pickup OTP */}
         {isReturn && step === 2 && !showOtpInput && isAssignedRider && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
