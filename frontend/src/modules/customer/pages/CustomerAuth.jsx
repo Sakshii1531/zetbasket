@@ -103,12 +103,12 @@ const CustomerAuth = () => {
                     const container = scrollableRef.current;
                     const containerRect = container.getBoundingClientRect();
                     const elRect = el.getBoundingClientRect();
-                    // Only scroll if element is below the visible area of the container
+                    // Scroll enough to show the input + the button below it (160px extra)
                     if (elRect.bottom > containerRect.bottom - 20) {
-                        const scrollBy = elRect.bottom - containerRect.bottom + 80;
+                        const scrollBy = elRect.bottom - containerRect.bottom + 160;
                         container.scrollBy({ top: scrollBy, behavior: 'smooth' });
                     }
-                }, 350);
+                }, 450);
             }
         };
         window.addEventListener('focusin', handleFocus);
