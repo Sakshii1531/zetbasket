@@ -94,14 +94,17 @@ const CustomerAuth = () => {
         sessionStorage.setItem('customer_auth_form_data', JSON.stringify(formData));
     }, [formData]);
 
-    // Scroll focused input into view within the card when keyboard opens
+    // Scroll focused input into view within the card's scroll container when keyboard opens
     useEffect(() => {
         const handleFocus = (e) => {
             const el = e.target;
             if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && scrollableRef.current) {
                 setTimeout(() => {
-                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 450);
+                    scrollableRef.current.scrollTo({
+                        top: scrollableRef.current.scrollHeight,
+                        behavior: 'smooth'
+                    });
+                }, 300);
             }
         };
         window.addEventListener('focusin', handleFocus);
@@ -223,7 +226,7 @@ const CustomerAuth = () => {
             </div>
 
             {/* Premium Centered Card Container */}
-            <div className="w-[92%] max-w-[400px] h-[88vh] max-h-[720px] bg-white relative z-10 overflow-hidden rounded-[40px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] border border-white/40 flex flex-col transition-colors duration-1000">
+            <div className="w-[92%] max-w-[400px] max-h-[88dvh] min-h-0 bg-white relative z-10 overflow-hidden rounded-[40px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] border border-white/40 flex flex-col transition-colors duration-1000" style={{ height: '88dvh' }}>
 
                 {/* Scrollable Content Container */}
                 <div ref={scrollableRef} className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pb-8">
