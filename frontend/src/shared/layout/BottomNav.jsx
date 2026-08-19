@@ -1,15 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard,
     ClipboardList,
     Box,
     Wallet,
-    MoreHorizontal,
-    ChevronDown,
-    X
 } from 'lucide-react';
 
 import { useAuth } from '@core/context/AuthContext';
@@ -17,47 +13,29 @@ import { useAuth } from '@core/context/AuthContext';
 const BottomNav = ({ navItems }) => {
     const { role } = useAuth();
     const location = useLocation();
-    const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+    const [viewportOffset, setViewportOffset] = useState(0);
+    const rafRef = useRef(null);
 
     useEffect(() => {
-        const handleFocusIn = (e) => {
-            const target = e.target;
-            if (
-                target &&
-                (target.tagName === 'INPUT' ||
-                    target.tagName === 'TEXTAREA' ||
-                    target.tagName === 'SELECT' ||
-                    target.isContentEditable)
-            ) {
-                if (target.type !== 'checkbox' && target.type !== 'radio') {
-                    setIsKeyboardOpen(true);
-                }
-            }
+        if (!window.visualViewport) return;
+
+        const handleViewport = () => {
+            if (rafRef.current) cancelAnimationFrame(rafRef.current);
+            rafRef.current = requestAnimationFrame(() => {
+                const vv = window.visualViewport;
+                // Distance from bottom of visual viewport to bottom of layout viewport
+                const offset = window.innerHeight - vv.height - vv.offsetTop;
+                setViewportOffset(Math.max(0, offset));
+            });
         };
 
-        const handleFocusOut = () => {
-            setIsKeyboardOpen(false);
-        };
-
-        const handleViewportResize = () => {
-            if (window.visualViewport) {
-                const isReduced = window.visualViewport.height < window.innerHeight * 0.85;
-                setIsKeyboardOpen(isReduced);
-            }
-        };
-
-        window.addEventListener('focusin', handleFocusIn);
-        window.addEventListener('focusout', handleFocusOut);
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', handleViewportResize);
-        }
+        window.visualViewport.addEventListener('resize', handleViewport);
+        window.visualViewport.addEventListener('scroll', handleViewport);
 
         return () => {
-            window.removeEventListener('focusin', handleFocusIn);
-            window.removeEventListener('focusout', handleFocusOut);
-            if (window.visualViewport) {
-                window.visualViewport.removeEventListener('resize', handleViewportResize);
-            }
+            window.visualViewport.removeEventListener('resize', handleViewport);
+            window.visualViewport.removeEventListener('scroll', handleViewport);
+            if (rafRef.current) cancelAnimationFrame(rafRef.current);
         };
     }, []);
 
@@ -74,10 +52,11 @@ const BottomNav = ({ navItems }) => {
         { label: 'Earnings', path: '/seller/earnings', icon: Wallet },
     ];
 
-    if (isKeyboardOpen) return null;
-
     return (
-        <div className="fixed bottom-0 left-0 right-0 h-16 bg-[#0a0c10] border-t border-white/5 z-[60] md:hidden px-2 flex items-center justify-around shadow-[0_-10px_30px_rgba(0,0,0,0.4)]">
+        <div
+            className="fixed left-0 right-0 h-16 bg-[#0a0c10] border-t border-white/5 z-[60] md:hidden px-2 flex items-center justify-around shadow-[0_-10px_30px_rgba(0,0,0,0.4)]"
+            style={{ bottom: viewportOffset }}
+        >
             {primaryItems.map((item) => (
                 <NavLink
                     key={item.path}
