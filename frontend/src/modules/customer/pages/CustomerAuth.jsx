@@ -100,11 +100,15 @@ const CustomerAuth = () => {
             const el = e.target;
             if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && scrollableRef.current) {
                 setTimeout(() => {
-                    scrollableRef.current.scrollTo({
-                        top: scrollableRef.current.scrollHeight,
-                        behavior: 'smooth'
-                    });
-                }, 300);
+                    const container = scrollableRef.current;
+                    const containerRect = container.getBoundingClientRect();
+                    const elRect = el.getBoundingClientRect();
+                    // Only scroll if element is below the visible area of the container
+                    if (elRect.bottom > containerRect.bottom - 20) {
+                        const scrollBy = elRect.bottom - containerRect.bottom + 80;
+                        container.scrollBy({ top: scrollBy, behavior: 'smooth' });
+                    }
+                }, 350);
             }
         };
         window.addEventListener('focusin', handleFocus);

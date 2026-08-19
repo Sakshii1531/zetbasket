@@ -33,7 +33,8 @@ const MiniCart = () => {
                 <div
                     key="mini-cart-wrapper"
                     id="mini-cart-target"
-                    className="fixed bottom-[80px] md:bottom-[calc(6rem-20px)] left-0 right-0 flex justify-center z-[55] pointer-events-none px-4"
+                    className="fixed md:bottom-[calc(6rem-20px)] left-0 right-0 flex justify-center z-[55] pointer-events-none px-4"
+                    style={{ bottom: 'calc(72px + env(safe-area-inset-bottom, 0px))' }}
                 >
 
                     <motion.div
