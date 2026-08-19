@@ -230,10 +230,10 @@ const CustomerAuth = () => {
             </div>
 
             {/* Premium Centered Card Container */}
-            <div className="w-[92%] max-w-[400px] max-h-[88dvh] min-h-0 bg-white relative z-10 overflow-hidden rounded-[40px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] border border-white/40 flex flex-col transition-colors duration-1000" style={{ height: '88dvh' }}>
+            <div className="w-[92%] max-w-[400px] max-h-[88dvh] min-h-0 bg-white relative z-10 overflow-hidden rounded-[40px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] border border-white/40 flex flex-col transition-colors duration-1000">
 
                 {/* Scrollable Content Container */}
-                <div ref={scrollableRef} className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pb-8">
+                <div ref={scrollableRef} className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pb-4">
 
                     {/* Header: Immersive Category Visuals */}
                     <motion.div
@@ -325,7 +325,7 @@ const CustomerAuth = () => {
 
 
                     {/* Authentication Form Block */}
-                    <div className="px-6 pt-0.5 pb-10">
+                    <div className="px-6 pt-0.5 pb-4">
                         <AnimatePresence mode="wait">
                             {!showOtp ? (
                                 <motion.div
