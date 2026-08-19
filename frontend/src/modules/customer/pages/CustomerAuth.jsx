@@ -94,25 +94,30 @@ const CustomerAuth = () => {
         sessionStorage.setItem('customer_auth_form_data', JSON.stringify(formData));
     }, [formData]);
 
-    // Scroll focused input into view within the card's scroll container when keyboard opens
+    // When keyboard opens, scroll the focused input into view within the card
     useEffect(() => {
-        const handleFocus = (e) => {
-            const el = e.target;
+        const scrollFocusedIntoView = () => {
+            const el = document.activeElement;
             if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && scrollableRef.current) {
-                setTimeout(() => {
-                    const container = scrollableRef.current;
-                    const containerRect = container.getBoundingClientRect();
-                    const elRect = el.getBoundingClientRect();
-                    // Scroll enough to show the input + the button below it (160px extra)
-                    if (elRect.bottom > containerRect.bottom - 20) {
-                        const scrollBy = elRect.bottom - containerRect.bottom + 160;
-                        container.scrollBy({ top: scrollBy, behavior: 'smooth' });
-                    }
-                }, 450);
+                const container = scrollableRef.current;
+                const containerRect = container.getBoundingClientRect();
+                const elRect = el.getBoundingClientRect();
+                if (elRect.bottom > containerRect.bottom - 16) {
+                    const scrollBy = elRect.bottom - containerRect.bottom + 150;
+                    container.scrollBy({ top: scrollBy, behavior: 'smooth' });
+                }
             }
         };
-        window.addEventListener('focusin', handleFocus);
-        return () => window.removeEventListener('focusin', handleFocus);
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', scrollFocusedIntoView);
+        }
+
+        return () => {
+            if (window.visualViewport) {
+                window.visualViewport.removeEventListener('resize', scrollFocusedIntoView);
+            }
+        };
     }, []);
 
     const activeCategory = CATEGORIES[carouselIndex];
