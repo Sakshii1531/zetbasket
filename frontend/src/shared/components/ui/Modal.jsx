@@ -11,23 +11,23 @@ import { cn } from '@/lib/utils';
 
 const Modal = ({ isOpen, onClose, title, children, footer, size = 'md' }) => {
     const sizes = {
-        sm: 'sm:max-w-md',
-        md: 'sm:max-w-lg',
-        lg: 'sm:max-w-2xl',
-        xl: 'sm:max-w-4xl',
-        full: 'sm:max-w-[95vw] h-[95vh]',
+        sm: 'max-w-[92vw] sm:max-w-md',
+        md: 'max-w-[94vw] sm:max-w-lg',
+        lg: 'max-w-[95vw] sm:max-w-2xl',
+        xl: 'max-w-[95vw] sm:max-w-4xl',
+        full: 'max-w-[95vw] h-[95vh]',
     };
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className={cn("overflow-hidden p-0", sizes[size])}>
-                <DialogHeader className="px-6 pt-3 pb-2 border-b border-gray-100/50 bg-gray-50/10">
-                    <DialogTitle className="text-2xl font-semibold text-gray-900">{title}</DialogTitle>
+            <DialogContent className={cn("overflow-hidden p-0 rounded-2xl sm:rounded-3xl max-h-[92vh] flex flex-col border border-slate-200/80 shadow-2xl", sizes[size])}>
+                <DialogHeader className="px-4 sm:px-6 py-3 sm:py-3.5 border-b border-slate-100 bg-white shrink-0">
+                    <DialogTitle className="text-base sm:text-lg font-black text-slate-900">{title}</DialogTitle>
                     <DialogDescription className="sr-only">Modal content</DialogDescription>
                 </DialogHeader>
 
                 <div
-                    className="px-6 pt-3 pb-5 max-h-[80vh] overflow-y-auto overscroll-contain touch-pan-y"
+                    className="px-4 sm:px-6 py-3.5 overflow-y-auto overscroll-contain touch-pan-y flex-1"
                     tabIndex={0}
                     onWheel={(e) => e.stopPropagation()}
                     onTouchMove={(e) => e.stopPropagation()}
@@ -36,7 +36,7 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'md' }) => {
                 </div>
 
                 {footer && (
-                    <DialogFooter className="px-6 py-4 bg-gray-50/30 border-t border-gray-100/50 sm:justify-end gap-3">
+                    <DialogFooter className="px-4 sm:px-6 py-3 bg-slate-50/90 border-t border-slate-100 shrink-0">
                         {footer}
                     </DialogFooter>
                 )}
@@ -46,4 +46,3 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'md' }) => {
 };
 
 export default Modal;
-

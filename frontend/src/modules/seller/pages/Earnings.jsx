@@ -1,6 +1,5 @@
 import React from "react";
 import Card from "@shared/components/ui/Card";
-import Badge from "@shared/components/ui/Badge";
 import Button from "@shared/components/ui/Button";
 import {
   TrendingUp,
@@ -10,6 +9,9 @@ import {
   Banknote,
   ArrowDownToLine,
   Building2,
+  Wallet,
+  Lightbulb,
+  ArrowUpRight,
 } from "lucide-react";
 import {
   BarChart,
@@ -21,11 +23,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
-
-import { MagicCard } from "@/components/ui/magic-card";
-import { BlurFade } from "@/components/ui/blur-fade";
-import ShimmerButton from "@/components/ui/shimmer-button";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { exportToCSV } from "@/lib/exportUtils";
@@ -33,7 +30,7 @@ import { useSellerEarnings } from "../context/SellerEarningsContext";
 
 const Earnings = () => {
   const navigate = useNavigate();
-  const { earningsData: data, earningsLoading: loading, refreshEarnings } = useSellerEarnings();
+  const { earningsData: data, earningsLoading: loading } = useSellerEarnings();
   const [withdrawAmount, setWithdrawAmount] = React.useState("");
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = React.useState(false);
   const [isWithdrawing, setIsWithdrawing] = React.useState(false);
@@ -51,7 +48,7 @@ const Earnings = () => {
     if (isNaN(amount) || amount <= 0 || amount > totalBalance) {
       alert(
         "Please enter a valid amount between ₹0.01 and ₹" +
-        totalBalance.toLocaleString(),
+        totalBalance.toLocaleString()
       );
       return;
     }
@@ -61,284 +58,203 @@ const Earnings = () => {
       setIsWithdrawing(false);
       setIsWithdrawModalOpen(false);
       alert(
-        `Withdrawal request of ₹${amount.toLocaleString()} submitted successfully!`,
+        `Withdrawal request of ₹${amount.toLocaleString()} submitted successfully!`
       );
     }, 1500);
   };
 
-  const exportReport = () => {
-    alert("Exporting monthly earnings report as PDF (Simulation)");
+  const handleExportCSV = () => {
+    const ledger = Array.isArray(data?.ledger) ? data.ledger : [];
+    if (ledger.length === 0) {
+      toast.info("No transactions to export.");
+      return;
+    }
+    const exportData = ledger.map((txn) => ({
+      id: txn.id ?? txn.ref ?? "",
+      type: txn.type ?? "",
+      amount: `₹${Number(txn.amount ?? 0).toLocaleString()}`,
+      status: txn.status ?? "",
+      date: txn.date ?? (txn.createdAt ? new Date(txn.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ""),
+      customer: txn.customer ?? "",
+      ref: txn.ref ?? "",
+    }));
+    exportToCSV(exportData, "Seller_Earnings_Report", {
+      id: "Transaction ID",
+      type: "Type",
+      amount: "Amount",
+      status: "Status",
+      date: "Date",
+      customer: "Customer",
+      ref: "Reference",
+    });
+    toast.success("Earnings report downloaded successfully!");
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-screen font-black text-slate-600">LOADING EARNINGS...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900 mb-3"></div>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading Earnings...</p>
+      </div>
+    );
   }
+
+  const totalRevenue = Number(data?.balances?.totalRevenue ?? 0);
+  const totalWithdrawn = Number(data?.balances?.totalWithdrawn ?? 0);
+  const availableBalance = Number(data?.balances?.availableBalance ?? data?.balances?.settledBalance ?? 0);
+
   return (
-    <div className="space-y-8 pb-16">
-      <BlurFade delay={0.1}>
-        <div className="flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-gray-800 hidden md:block">
-            Earnings Overview
-          </h2>
-          <div className="flex space-x-3">
-            <Button
-              onClick={() => {
-                const ledger = Array.isArray(data?.ledger) ? data.ledger : [];
-                if (ledger.length === 0) {
-                  toast.info("No transactions to export.");
-                  return;
-                }
-                const exportData = ledger.map((txn) => ({
-                  id: txn.id ?? txn.ref ?? "",
-                  type: txn.type ?? "",
-                  amount: `₹${Number(txn.amount ?? 0).toLocaleString()}`,
-                  status: txn.status ?? "",
-                  date: txn.date ?? (txn.createdAt ? new Date(txn.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ""),
-                  customer: txn.customer ?? "",
-                  ref: txn.ref ?? "",
-                }));
-                exportToCSV(exportData, "Seller_Earnings_Report", {
-                  id: "Transaction ID",
-                  type: "Type",
-                  amount: "Amount",
-                  status: "Status",
-                  date: "Date",
-                  customer: "Customer",
-                  ref: "Reference",
-                });
-                toast.success("Earnings report downloaded successfully!");
-              }}
-              variant="outline"
-              className="border-gray-200">
-              <Download className="mr-2 h-5 w-5" />
-              Download Report
-            </Button>
-            <ShimmerButton
-              onClick={() => navigate("/seller/withdrawals")}
-              className="px-6 py-2 rounded-xl text-sm font-bold text-white shadow-lg">
-              <span className="text-white">Withdraw Funds</span>
-            </ShimmerButton>
-          </div>
+    <div className="w-full p-0 sm:p-6 space-y-3 sm:space-y-6 font-['Outfit'] pb-20 sm:pb-8">
+      {/* Header & Main Actions */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
+        <div>
+          <h1 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">Earnings Overview</h1>
+          <p className="text-xs text-slate-500 font-medium">Track your shop revenue, withdrawals & payout balances</p>
         </div>
-      </BlurFade>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <BlurFade delay={0.2}>
-          <Card className="bg-gradient-to-br from-brand-600 to-teal-700 text-white border-none shadow-lg h-full">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-brand-100 font-medium">Total Revenue</p>
-                <h3 className="text-4xl font-bold mt-2">₹{Number(data?.balances?.totalRevenue ?? 0).toLocaleString()}</h3>
-              </div>
-              <div className="p-3 bg-white/20 rounded-xl">
-                <DollarSign className="h-8 w-8 text-white" />
-              </div>
-            </div>
-            <div className="mt-8 flex items-center text-brand-100 bg-white/10 w-fit px-3 py-1 rounded-full text-sm">
-              <TrendingUp className="mr-2" />
-              <span>Real-time earnings data</span>
-            </div>
-          </Card>
-        </BlurFade>
-
-        <BlurFade delay={0.3}>
-          <Card className="h-full border-none shadow-md bg-white p-6 flex flex-col justify-between group hover:shadow-xl transition-all duration-300">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-xs font-black text-slate-600 uppercase tracking-widest mb-1">
-                  Total Withdrawn
-                </p>
-                <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-                  ₹{Number(data?.balances?.totalWithdrawn ?? 0).toLocaleString()}
-                </h2>
-              </div>
-              <div className="p-3 bg-brand-50 rounded-lg group-hover:scale-110 transition-transform duration-300">
-                <Banknote className="h-6 w-6 text-brand-500" />
-              </div>
-            </div>
-            <div className="mt-4">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs">
-                  <ArrowDownToLine className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-600 uppercase">
-                    Available to Withdraw
-                  </p>
-                  <p className="text-xs font-black text-slate-900">
-                    ₹{Number(data?.balances?.availableBalance ?? data?.balances?.settledBalance ?? 0).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </BlurFade>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={handleExportCSV}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-all active:scale-95">
+            <Download className="h-4 w-4 text-slate-600" />
+            <span>Report</span>
+          </button>
+          <button
+            onClick={() => navigate("/seller/withdrawals")}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-black shadow-sm transition-all active:scale-95">
+            <Wallet className="h-4 w-4" />
+            <span>Withdraw Funds</span>
+          </button>
+        </div>
       </div>
 
-      <BlurFade delay={0.35}>
-        <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-brand-500/10 border border-emerald-500/20 rounded-3xl p-5 backdrop-blur-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-emerald-500/20 text-emerald-600 flex items-center justify-center font-bold text-lg shrink-0">
-              💡
-            </div>
-            <div>
-              <h4 className="text-sm font-black text-slate-900">How Seller Earnings Are Calculated?</h4>
-              <p className="text-xs text-slate-600 font-medium mt-0.5">
-                Your Net Earning = <strong className="text-emerald-700 font-bold">Item Subtotal</strong> − <strong className="text-rose-600 font-bold">Platform Commission</strong>. Delivery Fee & GST are managed separately by platform/rider services.
-              </p>
+      {/* KPI Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5">
+        {/* Total Revenue */}
+        <div className="bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-2xl p-4 sm:p-5 shadow-md border border-slate-800 flex flex-col justify-between relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Total Revenue</span>
+            <div className="h-8 w-8 rounded-xl bg-white/10 flex items-center justify-center">
+              <DollarSign className="h-4 w-4 text-brand-400" />
             </div>
           </div>
-          <div className="flex items-center gap-2 bg-white px-3.5 py-2 rounded-2xl border border-slate-200 text-xs font-bold text-slate-700 shadow-sm shrink-0">
-            <span>Commission Rate:</span>
-            <span className="text-brand-600 font-black">Category-based %</span>
+          <div className="mt-3">
+            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">₹{totalRevenue.toLocaleString()}</h2>
+            <div className="mt-2 flex items-center gap-1 text-[11px] font-bold text-emerald-400">
+              <TrendingUp className="h-3.5 w-3.5" />
+              <span>Real-time Order Earnings</span>
+            </div>
           </div>
         </div>
-      </BlurFade>
 
-      <BlurFade delay={0.4}>
-        <Card className="p-6 border-none shadow-md bg-white">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-brand-500" />
-              Monthly Revenue Performance
-            </h3>
+        {/* Total Withdrawn */}
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Total Withdrawn</span>
+            <div className="h-8 w-8 rounded-xl bg-slate-100 flex items-center justify-center">
+              <Banknote className="h-4 w-4 text-slate-700" />
+            </div>
           </div>
-          <div className="h-[300px] w-full min-h-[200px] flex items-center justify-center">
-            {(Array.isArray(data?.monthlyChart) ? data.monthlyChart : []).length === 0 ? (
-              <p className="text-slate-600 text-sm font-medium">No monthly revenue data yet.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.monthlyChart}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="#f1f5f9"
-                  />
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: 700 }}
-                    dy={10}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: 700 }}
-                    tickFormatter={(value) => `₹${value}`}
-                  />
-                  <Tooltip
-                    cursor={{ fill: "#f8fafc" }}
-                    contentStyle={{
-                      borderRadius: "12px",
-                      border: "none",
-                      boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
-                      fontSize: "12px",
-                      fontWeight: "700",
-                    }}
-                    formatter={(value) => [`₹${value.toLocaleString()}`, "Revenue"]}
-                  />
-                  <Bar
-                    dataKey="revenue"
-                    fill="url(#colorRevenue)"
-                    radius={[6, 6, 0, 0]}
-                    barSize={40}
-                  />
-                  <defs>
-                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366f1" stopOpacity={1} />
-                      <stop offset="95%" stopColor="#818cf8" stopOpacity={1} />
-                    </linearGradient>
-                  </defs>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
+          <div className="mt-3">
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">₹{totalWithdrawn.toLocaleString()}</h2>
+            <p className="mt-2 text-[11px] font-semibold text-slate-500">Total settled bank payouts</p>
           </div>
-        </Card>
-      </BlurFade>
+        </div>
 
-      {/* Withdrawal Modal */}
-      <AnimatePresence>
-        {isWithdrawModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="w-full max-w-md relative z-10 bg-white rounded-lg shadow-2xl overflow-hidden p-8 text-center">
-              <div className="h-16 w-16 bg-brand-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
-                <Banknote className="h-8 w-8 text-brand-600" />
-              </div>
+        {/* Available Balance */}
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Available to Withdraw</span>
+            <div className="h-8 w-8 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
+              <ArrowDownToLine className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">₹{availableBalance.toLocaleString()}</h2>
+            <button
+              onClick={() => navigate("/seller/withdrawals")}
+              className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-brand-600 hover:text-brand-700">
+              <span>Transfer to bank</span>
+              <ArrowUpRight className="h-3 w-3" />
+            </button>
+          </div>
+        </div>
+      </div>
 
-              <h2 className="text-2xl font-black text-slate-900 mb-2">
-                Withdraw Funds
-              </h2>
-              <p className="text-sm text-slate-600 font-medium mb-8">
-                Available Balance:{" "}
-                <span className="text-brand-600 font-bold">
-                  ₹{Number(data?.balances?.settledBalance ?? 0).toLocaleString()}
-                </span>
-              </p>
+      {/* Calculation Banner */}
+      <div className="bg-emerald-50/70 border border-emerald-200/60 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="h-9 w-9 rounded-xl bg-emerald-500/15 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+            <Lightbulb className="h-5 w-5" />
+          </div>
+          <div className="space-y-0.5 min-w-0">
+            <h4 className="text-xs sm:text-sm font-black text-slate-900">How Seller Earnings Are Calculated?</h4>
+            <p className="text-xs text-slate-600 font-medium leading-relaxed">
+              Net Earning = <strong className="text-emerald-700 font-bold">Item Subtotal</strong> − <strong className="text-rose-600 font-bold">Platform Commission</strong>. Delivery Fee & GST are managed separately by platform.
+            </p>
+          </div>
+        </div>
+        <div className="px-3 py-1 bg-white rounded-xl border border-emerald-200 text-[11px] font-extrabold text-slate-700 shrink-0 self-stretch sm:self-auto text-center">
+          Commission: <span className="text-brand-600">Category %</span>
+        </div>
+      </div>
 
-              <div className="space-y-4 text-left">
-                <div>
-                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 block">
-                    Amount
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 font-bold">
-                      ₹
-                    </span>
-                    <input
-                      type="number"
-                      className="w-full pl-8 pr-4 py-3 rounded-lg border-slate-200 bg-slate-50 font-bold text-slate-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none"
-                      placeholder="0.00"
-                      value={withdrawAmount}
-                      onChange={(e) => setWithdrawAmount(e.target.value)}
-                    />
-                  </div>
-                </div>
+      {/* Monthly Revenue Chart */}
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-6 shadow-sm space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 bg-slate-100 rounded-xl flex items-center justify-center text-slate-800 shrink-0">
+              <BarChart3 className="h-4 w-4" />
+            </div>
+            <h3 className="text-sm sm:text-base font-black text-slate-900">Monthly Revenue Performance</h3>
+          </div>
+        </div>
 
-                <div>
-                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 block">
-                    Select Bank Account
-                  </label>
-                  <div className="p-4 border border-slate-200 rounded-lg flex items-center gap-4 cursor-pointer hover:border-brand-500 hover:bg-brand-50/10 transition-all group">
-                    <div className="h-10 w-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-600 group-hover:bg-brand-100 group-hover:text-brand-600 transition-colors">
-                      <Building2 className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-black text-slate-900">
-                        HDFC Bank **** 4589
-                      </p>
-                      <p className="text-xs text-slate-600 font-bold">
-                        Primary Account
-                      </p>
-                    </div>
-                    <div className="h-5 w-5 rounded-full border-2 border-slate-200 group-hover:border-brand-500 group-hover:bg-brand-500 transition-all"></div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 mt-8">
-                <button
-                  onClick={() => setIsWithdrawModalOpen(false)}
-                  className="py-3 rounded-lg font-black text-slate-600 hover:bg-slate-50 transition-colors">
-                  CANCEL
-                </button>
-                <button
-                  onClick={() => {
-                    setIsWithdrawModalOpen(false);
-                    alert("Withdrawal request submitted!");
+        <div className="h-[240px] sm:h-[300px] w-full min-h-[200px]">
+          {(Array.isArray(data?.monthlyChart) ? data.monthlyChart : []).length === 0 ? (
+            <div className="h-full flex items-center justify-center">
+              <p className="text-slate-400 text-xs font-bold">No monthly revenue data yet.</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data.monthlyChart} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#64748b", fontSize: 11, fontWeight: 700 }}
+                  dy={6}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#64748b", fontSize: 10, fontWeight: 700 }}
+                  tickFormatter={(val) => `₹${val}`}
+                />
+                <Tooltip
+                  cursor={{ fill: "#f8fafc" }}
+                  contentStyle={{
+                    borderRadius: "12px",
+                    border: "1px solid #e2e8f0",
+                    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+                    fontSize: "12px",
+                    fontWeight: "700",
                   }}
-                  className="py-3 rounded-lg bg-black  text-primary-foreground font-black shadow-lg shadow-brand-200 hover:bg-brand-700 hover:shadow-brand-300 transition-all">
-                  CONFIRM
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+                  formatter={(val) => [`₹${val.toLocaleString()}`, "Revenue"]}
+                />
+                <Bar
+                  dataKey="revenue"
+                  fill="#0f172a"
+                  radius={[6, 6, 0, 0]}
+                  maxBarSize={36}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

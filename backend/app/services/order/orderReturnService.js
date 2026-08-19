@@ -41,6 +41,7 @@ import { clearOrderTracking } from "../firebaseService.js";
 import logger from "../logger.js";
 import { calculateRiderPayout } from "../finance/pricingService.js";
 import { distanceMeters } from "../../utils/geoUtils.js";
+import { generateReturnDropOtp } from "../deliveryOtpService.js";
 
 import { isReturnEligible } from "../../utils/returnEligibilityHelper.js";
 
@@ -220,15 +221,29 @@ export class OrderReturnService {
       }
     }
 
-    let activeOtp = null;
-    if (order.returnStatus === "return_pickup_assigned") {
-      const otpDoc = await OrderOtp.findOne({
-        orderId: order.orderId,
-        type: "return_pickup",
-        consumedAt: null,
-        expiresAt: { $gt: new Date() },
-      }).sort({ createdAt: -1 });
-      activeOtp = otpDoc?.code || null;
+    let activePickupOtp = null;
+    let activeDropOtp = null;
+
+    const otps = await OrderOtp.find({
+      orderId: order.orderId,
+      consumedAt: null,
+      expiresAt: { $gt: new Date() },
+    }).sort({ createdAt: -1 }).lean();
+
+    otps.forEach((doc) => {
+      if (doc.type === "return_pickup" && !activePickupOtp) activePickupOtp = doc.code;
+      if (doc.type === "return_drop" && !activeDropOtp) activeDropOtp = doc.code;
+    });
+
+    if (!activeDropOtp && ["return_in_transit", "return_drop_pending"].includes(order.returnStatus)) {
+      try {
+        const generated = await generateReturnDropOtp(order.orderId);
+        if (generated?.success) {
+          activeDropOtp = generated.otp;
+        }
+      } catch (e) {
+        logger.error("Failed to auto-generate return drop OTP", { error: e.message });
+      }
     }
 
     return {
@@ -251,7 +266,8 @@ export class OrderReturnService {
       returnQcStatus: order.returnQcStatus,
       returnQcAt: order.returnQcAt,
       returnQcNote: order.returnQcNote,
-      returnPickupOtp: activeOtp,
+      returnPickupOtp: activePickupOtp,
+      returnDropOtp: activeDropOtp,
     };
   }
 

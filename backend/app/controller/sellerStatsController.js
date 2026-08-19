@@ -69,23 +69,32 @@ export const getSellerEarnings = async (req, res) => {
             .filter(t => t.type === 'Withdrawal' && t.status === 'Settled')
             .reduce((acc, t) => acc + Math.abs(t.amount), 0);
 
-        // Monthly Revenue Aggregation (Last 6 Months)
+        // Monthly Revenue Aggregation (Last 6 Months) — sourced from Order collection
+        // to stay consistent with totalRevenue which is also computed from Orders.
         const sixMonthsAgo = new Date();
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        sixMonthsAgo.setDate(1);
+        sixMonthsAgo.setHours(0, 0, 0, 0);
 
-        const monthlyAggregation = await Transaction.aggregate([
+        const monthlyAggregation = await Order.aggregate([
             {
                 $match: {
-                    user: new mongoose.Types.ObjectId(sellerId),
-                    userModel: 'Seller',
-                    type: 'Order Payment',
+                    seller: sellerOid,
+                    status: { $ne: 'cancelled' },
                     createdAt: { $gte: sixMonthsAgo }
                 }
             },
             {
                 $group: {
                     _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
-                    revenue: { $sum: "$amount" }
+                    revenue: {
+                        $sum: {
+                            $ifNull: [
+                                "$sellerNetEarning",
+                                { $ifNull: ["$pricing.subtotal", { $ifNull: ["$pricing.total", 0] }] }
+                            ]
+                        }
+                    }
                 }
             },
             { $sort: { _id: 1 } }
@@ -96,11 +105,11 @@ export const getSellerEarnings = async (req, res) => {
         for (let i = 5; i >= 0; i--) {
             const d = new Date();
             d.setMonth(d.getMonth() - i);
-            const dateStr = d.toISOString().slice(0, 7);
-            const data = monthlyAggregation.find(m => m._id === dateStr);
+            const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const found = monthlyAggregation.find(m => m._id === dateStr);
             chartData.push({
                 name: monthNames[d.getMonth()],
-                revenue: data ? data.revenue : 0
+                revenue: found ? Math.round(found.revenue) : 0
             });
         }
 

@@ -38,6 +38,53 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { getOrderStatusVariant } from '../components/orders';
 import { useSellerOrders } from '../context/SellerOrdersContext';
 
+// Helper to minimize order ID length while guaranteeing 100% uniqueness
+const formatMinOrderId = (rawId, index = 0, allOrders = []) => {
+    if (!rawId) return `ORD-${String(index + 1).padStart(4, '0')}`;
+    const str = String(rawId).trim();
+    if (str.length <= 10 && !str.toLowerCase().startsWith('ord-')) {
+        return `ORD-${str}`;
+    }
+    const cleanStr = str.replace(/^ORD-?/i, '');
+    let shortCode = cleanStr.slice(-6).toUpperCase();
+
+    if (Array.isArray(allOrders) && allOrders.length > 0) {
+        const collisions = allOrders.filter(o => {
+            const oId = String(o.orderId || o.id || o._id || '').replace(/^ORD-?/i, '');
+            return oId.slice(-6).toUpperCase() === shortCode;
+        });
+        if (collisions.length > 1) {
+            shortCode = cleanStr.slice(-8).toUpperCase();
+        }
+    }
+
+    return `ORD-${shortCode}`;
+};
+
+// Strict status progression hierarchy - prevents order status regression
+const STATUS_RANK = {
+    pending: 0,
+    confirmed: 1,
+    packed: 2,
+    out_for_delivery: 3,
+    delivered: 4,
+    cancelled: 5,
+};
+
+const isStatusOptionDisabled = (currentStatus, targetStatus) => {
+    const current = String(currentStatus || 'pending').toLowerCase();
+    const target = String(targetStatus || '').toLowerCase();
+
+    if (current === 'delivered' || current === 'cancelled') return true;
+    if (current === target) return false;
+    if (target === 'cancelled') return current === 'delivered';
+
+    const currentRank = STATUS_RANK[current] ?? 0;
+    const targetRank = STATUS_RANK[target] ?? 0;
+
+    return targetRank < currentRank;
+};
+
 const Orders = () => {
     const { orders: ordersFromContext } = useSellerOrders();
     const [orders, setOrders] = useState([]);
@@ -131,43 +178,62 @@ const Orders = () => {
                 ? payload.items
                 : (response.data.results || []);
 
-            const formattedOrders = (rawOrders || []).map(order => ({
-                id: order.orderId,
-                _id: order._id,
-                customer: {
-                    name: order.customer?.name || 'Unknown',
-                    phone: order.customer?.phone || '',
-                    avatar: (order.customer?.name || 'U').charAt(0)
-                },
-                items: (order.items || []).map(item => ({
-                    name: item.name,
-                    price: item.price,
-                    qty: item.quantity,
-                    image: item.image
-                })),
-                total: Math.ceil(order.pricing?.total || 0),
-                productSubtotal: Math.ceil(order.paymentBreakdown?.productSubtotal || order.pricing?.subtotal || (order.items || []).reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0)),
-                adminCommission: Math.ceil(order.paymentBreakdown?.adminProductCommissionTotal || 0),
-                sellerPayout: Math.ceil(order.paymentBreakdown?.sellerPayoutTotal || (order.pricing?.subtotal || (order.items || []).reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0)) - (order.paymentBreakdown?.adminProductCommissionTotal || 0)),
-                deliveryFee: Math.ceil(order.paymentBreakdown?.deliveryFeeCharged || order.pricing?.deliveryFee || 0),
-                taxTotal: Math.ceil(order.paymentBreakdown?.taxTotal || order.pricing?.gst || 0),
-                status: getLegacyStatusFromOrder(order),
-                workflowStatus: order.workflowStatus,
-                workflowVersion: order.workflowVersion,
-                date: order.createdAt
-                    ? new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                    : '',
-                time: order.createdAt
-                    ? new Date(order.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
-                    : '',
-                address: order.address
-                    ? `${order.address.address || ''}, ${order.address.city || ''}`.trim()
-                    : '',
-                location: order.address?.location || null,
-                payment: order.payment?.method === 'cash' || order.payment?.method === 'cod'
-                    ? 'Cash on Delivery'
-                    : 'Online Paid'
-            }));
+            const formattedOrders = (rawOrders || []).map((order, orderIdx) => {
+                const rawId = order.orderId || order._id || '';
+                const shortId = formatMinOrderId(rawId, orderIdx, rawOrders);
+                const discount = Math.ceil(
+                    order.paymentBreakdown?.discountTotal ||
+                    order.pricing?.discount ||
+                    order.couponSnapshot?.discountAmountApplied ||
+                    order.couponDiscount ||
+                    order.discount ||
+                    0
+                );
+                const couponCode = order.couponSnapshot?.code || order.couponCode || order.coupon?.code || (typeof order.coupon === 'string' ? order.coupon : '');
+
+                return {
+                    id: order.orderId,
+                    displayId: shortId,
+                    _id: order._id,
+                    customer: {
+                        name: order.customer?.name || 'Unknown',
+                        phone: order.customer?.phone || '',
+                        avatar: (order.customer?.name || 'U').charAt(0)
+                    },
+                    items: (order.items || []).map((item, itemIdx) => ({
+                        id: item._id || `${rawId}-item-${itemIdx + 1}`,
+                        itemCode: `${shortId}-P${itemIdx + 1}`,
+                        name: item.name,
+                        price: item.price,
+                        qty: item.quantity,
+                        image: item.image
+                    })),
+                    total: Math.ceil(order.pricing?.total || order.paymentBreakdown?.grandTotal || 0),
+                    discount: discount,
+                    couponCode: couponCode,
+                    productSubtotal: Math.ceil(order.paymentBreakdown?.productSubtotal || order.pricing?.subtotal || (order.items || []).reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0)),
+                    adminCommission: Math.ceil(order.paymentBreakdown?.adminProductCommissionTotal || 0),
+                    sellerPayout: Math.ceil(order.paymentBreakdown?.sellerPayoutTotal || (order.pricing?.subtotal || (order.items || []).reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0)) - (order.paymentBreakdown?.adminProductCommissionTotal || 0)),
+                    deliveryFee: Math.ceil(order.paymentBreakdown?.deliveryFeeCharged || order.pricing?.deliveryFee || 0),
+                    taxTotal: Math.ceil(order.paymentBreakdown?.taxTotal || order.pricing?.gst || 0),
+                    status: getLegacyStatusFromOrder(order),
+                    workflowStatus: order.workflowStatus,
+                    workflowVersion: order.workflowVersion,
+                    date: order.createdAt
+                        ? new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                        : '',
+                    time: order.createdAt
+                        ? new Date(order.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+                        : '',
+                    address: order.address
+                        ? `${order.address.address || ''}, ${order.address.city || ''}`.trim()
+                        : '',
+                    location: order.address?.location || null,
+                    payment: order.payment?.method === 'cash' || order.payment?.method === 'cod'
+                        ? 'Cash on Delivery'
+                        : 'Online Paid'
+                };
+            });
 
             setOrders(formattedOrders);
             setSummary({
@@ -208,6 +274,7 @@ const Orders = () => {
     const filteredOrders = useMemo(() => {
         return safeOrders.filter(order => {
             const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (order.displayId && order.displayId.toLowerCase().includes(searchTerm.toLowerCase())) ||
                 order.customer.name.toLowerCase().includes(searchTerm.toLowerCase());
             const statusToMatch = activeTab === 'Out for Delivery' ? 'out_for_delivery' : activeTab.toLowerCase();
             const matchesTab = activeTab === 'All' || order.status.toLowerCase() === statusToMatch;
@@ -262,11 +329,11 @@ const Orders = () => {
             // the new status immediately — no waiting for a full re-fetch.
             setOrders((prev) =>
                 prev.map((o) =>
-                    o.id === orderId ? { ...o, status: normalized } : o
+                    (o.id === orderId || o._id === orderId) ? { ...o, status: normalized } : o
                 )
             );
-            if (selectedOrder && selectedOrder.id === orderId) {
-                setSelectedOrder({ ...selectedOrder, status: normalized });
+            if (selectedOrder && (selectedOrder.id === orderId || selectedOrder._id === orderId)) {
+                setSelectedOrder((prev) => (prev ? { ...prev, status: normalized } : null));
             }
             fetchOrders(page, false); // Sync with server in the background
         } catch (error) {
@@ -374,7 +441,7 @@ const Orders = () => {
 
                     {/* Main Content Area */}
                     <BlurFade delay={0.3}>
-                        <Card className="border-none shadow-xl ring-1 ring-slate-100 rounded-lg bg-white overflow-visible">
+                        <Card className="border-none shadow-xl ring-1 ring-slate-100 rounded-lg bg-white overflow-visible" contentClassName="p-0 sm:p-5">
                             {/* Tabs */}
                             <div className="border-b border-slate-100 bg-slate-50/30 overflow-x-auto scrollbar-hide">
                                 <div className="flex px-3 sm:px-6 items-center min-w-max">
@@ -410,12 +477,12 @@ const Orders = () => {
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         placeholder="Search by Order ID or Customer Name..."
-                                        className="w-full pl-10 pr-4 py-2.5 bg-slate-100/50 border-none rounded-lg text-sm font-semibold text-slate-700 placeholder:text-slate-500 focus:ring-2 focus:ring-primary/5 transition-all outline-none"
+                                        className="w-full pl-10 pr-4 py-2.5 bg-slate-100/50 border-none rounded-xl text-xs sm:text-sm font-semibold text-slate-700 placeholder:text-slate-500 focus:ring-2 focus:ring-primary/5 transition-all outline-none"
                                     />
                                 </div>
-                                <div className="flex gap-3 shrink-0 w-full lg:w-auto items-center justify-end flex-wrap">
-                                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start">
-                                        <div className="w-full sm:w-32">
+                                <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full lg:w-auto items-stretch sm:items-center justify-end">
+                                    <div className="grid grid-cols-2 gap-2 w-full sm:w-auto items-center">
+                                        <div className="w-full">
                                             <DatePicker
                                                 value={startDate}
                                                 max={todayStr}
@@ -441,10 +508,7 @@ const Orders = () => {
                                                 placeholder="From date"
                                             />
                                         </div>
-                                        <span className="text-xs font-semibold text-slate-600 hidden sm:inline">
-                                            to
-                                        </span>
-                                        <div className="w-full sm:w-32 mt-2 sm:mt-0">
+                                        <div className="w-full">
                                             <DatePicker
                                                 value={endDate}
                                                 max={todayStr}
@@ -474,18 +538,20 @@ const Orders = () => {
                                             />
                                         </div>
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => { setStartDate(''); setEndDate(''); setPage(1); }}
-                                        className="text-xs font-semibold text-slate-600 hover:text-slate-700"
-                                    >
-                                        Clear dates
-                                    </button>
+                                    {(startDate || endDate) && (
+                                        <button
+                                            type="button"
+                                            onClick={() => { setStartDate(''); setEndDate(''); setPage(1); }}
+                                            className="text-xs font-bold text-rose-600 hover:text-rose-700 self-end sm:self-center px-1 py-1"
+                                        >
+                                            Clear dates
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
                             {/* Mobile: Card list */}
-                            <div className="md:hidden p-3 sm:p-4 space-y-3">
+                            <div className="md:hidden p-2 sm:p-4 space-y-3">
                                 {filteredOrders.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center py-12 px-4">
                                         <div className="h-14 w-14 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 mb-3">
@@ -497,59 +563,82 @@ const Orders = () => {
                                     </div>
                                 ) : (
                                 <AnimatePresence mode="popLayout">
-                                    {filteredOrders
-                                        .map((order) => (
+                                    {filteredOrders.map((order) => (
                                         <motion.div
                                             key={order.id}
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, scale: 0.95 }}
-                                            className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm active:bg-slate-50/50"
+                                            className="bg-white border border-slate-200/80 rounded-2xl p-3.5 shadow-sm space-y-3"
                                         >
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div className="min-w-0 flex-1" onClick={() => handleViewDetails(order)}>
-                                                    <p className="text-xs font-black text-slate-900 truncate">#{order.id}</p>
-                                                    <p className="text-xs font-semibold text-slate-600 mt-0.5 flex items-center gap-1">
-                                                        <HiOutlineCalendarDays className="h-3 w-3 shrink-0" />
-                                                        {order.date} • {order.time}
-                                                    </p>
-                                                    <div className="flex items-center gap-2 mt-2">
-                                                        <div className="h-7 w-7 rounded-full bg-slate-900 flex items-center justify-center text-[10px] font-black text-white shrink-0">
-                                                            {order.customer.avatar}
-                                                        </div>
-                                                        <p className="text-xs font-bold text-slate-800 truncate">{order.customer.name}</p>
-                                                    </div>
-                                                    <p className="text-sm font-black text-slate-900 mt-2">₹{order.total.toLocaleString()}</p>
+                                            {/* Card Top Row: Order ID + Status Dropdown */}
+                                            <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
+                                                <div className="flex flex-col gap-1 min-w-0">
+                                                    <span className="font-mono bg-slate-100 text-slate-900 px-2 py-0.5 rounded-lg text-xs font-bold tracking-tight w-fit">
+                                                        #{order.displayId || order.id}
+                                                    </span>
+                                                    <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1.5">
+                                                        <HiOutlineCalendarDays className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                                                        <span>{order.date} • {order.time}</span>
+                                                    </span>
                                                 </div>
-                                                <div className="flex flex-col items-end gap-2 shrink-0">
-                                                    <Badge variant={getStatusColor(order.status)} className="text-[10px] font-black uppercase px-2 py-0">
-                                                        {order.status}
-                                                    </Badge>
+                                                <div className="relative shrink-0">
                                                     <select
                                                         value={order.status}
                                                         onChange={(e) => handleStatusUpdate(order.id, e.target.value)}
                                                         onClick={(e) => e.stopPropagation()}
+                                                        disabled={['delivered', 'cancelled'].includes(order.status.toLowerCase())}
                                                         className={cn(
-                                                            "w-full min-w-[100px] text-[10px] pl-2 pr-6 py-1.5 rounded-lg font-black uppercase cursor-pointer appearance-none border outline-none",
-                                                            order.status === 'pending' ? "bg-amber-100 text-amber-700" :
-                                                                order.status === 'delivered' ? "bg-brand-100 text-brand-700" :
-                                                                    order.status === 'cancelled' ? "bg-rose-100 text-rose-700" : "bg-slate-100 text-slate-700"
+                                                            "text-[10px] px-2.5 py-1 rounded-full font-black uppercase tracking-wider appearance-none border-none outline-none shadow-sm cursor-pointer text-center",
+                                                            ['delivered', 'cancelled'].includes(order.status.toLowerCase()) ? "cursor-not-allowed opacity-90" : "cursor-pointer",
+                                                            order.status === 'pending' ? "bg-amber-100 text-amber-800" :
+                                                                order.status === 'confirmed' ? "bg-brand-100 text-brand-700" :
+                                                                    order.status === 'packed' ? "bg-brand-100 text-brand-700" :
+                                                                        order.status === 'out_for_delivery' ? "bg-purple-100 text-purple-700" :
+                                                                            order.status === 'delivered' ? "bg-brand-100 text-brand-700" :
+                                                                                order.status === 'cancelled' ? "bg-rose-100 text-rose-700" : "bg-slate-100 text-slate-700"
                                                         )}
                                                     >
-                                                        <option value="pending">Pending</option>
-                                                        <option value="confirmed">Confirmed</option>
-                                                        <option value="packed">Packed</option>
-                                                        <option value="out_for_delivery">Out</option>
-                                                        <option value="delivered">Delivered</option>
-                                                        <option value="cancelled">Cancelled</option>
+                                                        <option value="pending" disabled={isStatusOptionDisabled(order.status, 'pending')}>Pending</option>
+                                                        <option value="confirmed" disabled={isStatusOptionDisabled(order.status, 'confirmed')}>Confirmed</option>
+                                                        <option value="packed" disabled={isStatusOptionDisabled(order.status, 'packed')}>Packed</option>
+                                                        <option value="out_for_delivery" disabled={isStatusOptionDisabled(order.status, 'out_for_delivery')}>Out</option>
+                                                        <option value="delivered" disabled={isStatusOptionDisabled(order.status, 'delivered')}>Delivered</option>
+                                                        <option value="cancelled" disabled={isStatusOptionDisabled(order.status, 'cancelled')}>Cancelled</option>
                                                     </select>
-                                                    <button
-                                                        onClick={() => handleViewDetails(order)}
-                                                        className="p-2 hover:bg-slate-100 rounded-lg text-slate-600"
-                                                    >
-                                                        <HiOutlineEye className="h-4 w-4" />
-                                                    </button>
                                                 </div>
+                                            </div>
+
+                                            {/* Card Middle Row: Customer Info & Price */}
+                                            <div className="flex items-center justify-between gap-3 pt-0.5">
+                                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                                    <div className="h-8 w-8 rounded-full bg-slate-900 flex items-center justify-center text-xs font-black text-white shrink-0 shadow-sm">
+                                                        {order.customer.avatar}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs font-bold text-slate-900 truncate">{order.customer.name}</p>
+                                                        <p className="text-[11px] font-medium text-slate-600 truncate">{order.items.length} {order.items.length === 1 ? 'item' : 'items'} • {order.payment}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right shrink-0">
+                                                    <p className="text-base font-black text-slate-900">₹{order.total.toLocaleString('en-IN')}</p>
+                                                    {order.discount > 0 && (
+                                                        <p className="text-[10px] font-extrabold text-emerald-600">
+                                                            Saved ₹{order.discount} {order.couponCode ? `(${order.couponCode})` : 'coupon'}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Card Action Row */}
+                                            <div className="flex items-center justify-end pt-1">
+                                                <button
+                                                    onClick={() => handleViewDetails(order)}
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 rounded-xl text-xs font-bold transition-all"
+                                                >
+                                                    <HiOutlineEye className="h-3.5 w-3.5" />
+                                                    <span>View Details</span>
+                                                </button>
                                             </div>
                                         </motion.div>
                                     ))}
@@ -584,7 +673,7 @@ const Orders = () => {
                                                     <td className="px-4 lg:px-6 py-3 lg:py-4">
                                                         <div>
                                                             <span className="text-xs font-bold text-slate-900 group-hover:text-primary transition-colors cursor-pointer" onClick={() => handleViewDetails(order)}>
-                                                                #{order.id}
+                                                                #{order.displayId || order.id}
                                                             </span>
                                                             <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 mt-1">
                                                                 <HiOutlineCalendarDays className="h-3 w-3" />
@@ -606,6 +695,11 @@ const Orders = () => {
                                                     <td className="px-4 lg:px-6 py-3 lg:py-4">
                                                         <div className="flex flex-col">
                                                             <span className="text-xs font-bold text-slate-900">₹{order.total.toLocaleString()}</span>
+                                                            {order.discount > 0 && (
+                                                                <span className="text-[10px] font-bold text-emerald-600">
+                                                                    Coupon: -₹{order.discount} {order.couponCode ? `(${order.couponCode})` : ''}
+                                                                </span>
+                                                            )}
                                                             <span className="text-xs font-semibold text-slate-600">{order.items.length} items</span>
                                                         </div>
                                                     </td>
@@ -627,12 +721,12 @@ const Orders = () => {
                                                                                             "bg-slate-100 text-slate-700 focus:ring-slate-200"
                                                                 )}
                                                             >
-                                                                <option value="pending" disabled={['confirmed','packed','out_for_delivery','delivered','cancelled'].includes(order.status)}>Pending</option>
-                                                                <option value="confirmed" disabled={['packed','out_for_delivery','delivered','cancelled'].includes(order.status)}>Confirmed</option>
-                                                                <option value="packed" disabled={['out_for_delivery','delivered','cancelled'].includes(order.status)}>Packed</option>
-                                                                <option value="out_for_delivery" disabled={['delivered','cancelled'].includes(order.status)}>Out for Delivery</option>
-                                                                <option value="delivered" disabled={order.status === 'cancelled'}>Delivered</option>
-                                                                <option value="cancelled" disabled={order.status === 'delivered'}>Cancelled</option>
+                                                                <option value="pending" disabled={isStatusOptionDisabled(order.status, 'pending')}>Pending</option>
+                                                                <option value="confirmed" disabled={isStatusOptionDisabled(order.status, 'confirmed')}>Confirmed</option>
+                                                                <option value="packed" disabled={isStatusOptionDisabled(order.status, 'packed')}>Packed</option>
+                                                                <option value="out_for_delivery" disabled={isStatusOptionDisabled(order.status, 'out_for_delivery')}>Out for Delivery</option>
+                                                                <option value="delivered" disabled={isStatusOptionDisabled(order.status, 'delivered')}>Delivered</option>
+                                                                <option value="cancelled" disabled={isStatusOptionDisabled(order.status, 'cancelled')}>Cancelled</option>
                                                             </select>
                                                         </div>
                                                     </td>
@@ -805,7 +899,7 @@ const Orders = () => {
                                                 <h3 className="text-base font-black text-slate-900">Order Details</h3>
                                                 <div className="flex items-center space-x-2 mt-0.5">
                                                     <Badge variant={getStatusColor(selectedOrder.status)} className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0">{selectedOrder.status}</Badge>
-                                                    <span className="text-xs font-bold text-slate-600 uppercase tracking-widest">#{selectedOrder.id}</span>
+                                                    <span className="text-xs font-bold text-slate-600 uppercase tracking-widest">#{selectedOrder.displayId || selectedOrder.id}</span>
                                                 </div>
                                                 {(selectedOrder.date || selectedOrder.time) && (
                                                     <p className="text-[11px] font-bold text-slate-500 mt-1.5 flex items-center gap-1.5">
@@ -878,6 +972,14 @@ const Orders = () => {
                                                             <span className="font-semibold">Item Subtotal</span>
                                                             <span className="font-bold text-white">₹{selectedOrder.productSubtotal || Math.ceil(selectedOrder.items.reduce((s, i) => s + i.price * i.qty, 0))}</span>
                                                         </div>
+                                                        {selectedOrder.discount > 0 && (
+                                                            <div className="flex justify-between text-emerald-400 font-bold">
+                                                                <span className="font-semibold flex items-center gap-1">
+                                                                    🏷️ Coupon Discount {selectedOrder.couponCode ? `(${selectedOrder.couponCode})` : ''}
+                                                                </span>
+                                                                <span>- ₹{selectedOrder.discount}</span>
+                                                            </div>
+                                                        )}
                                                         {selectedOrder.adminCommission > 0 && (
                                                             <div className="flex justify-between text-rose-300">
                                                                 <span className="font-semibold">Platform Commission</span>
@@ -892,8 +994,16 @@ const Orders = () => {
                                                             </div>
                                                             <span className="text-base font-black text-emerald-400">₹{selectedOrder.sellerPayout || selectedOrder.productSubtotal}</span>
                                                         </div>
-                                                        <div className="pt-1 flex justify-between text-[11px] text-slate-400">
-                                                            <span>Customer Bill Total: <strong className="text-slate-200">₹{selectedOrder.total}</strong></span>
+                                                        <div className="pt-1 flex justify-between items-center text-[11px] text-slate-400">
+                                                            <span>Customer Paid Total:</span>
+                                                            <span className="text-slate-200 font-black">
+                                                                ₹{selectedOrder.total}
+                                                                {selectedOrder.discount > 0 && (
+                                                                    <span className="ml-1 text-[10px] font-semibold text-emerald-400">
+                                                                        (₹{selectedOrder.discount} coupon off)
+                                                                    </span>
+                                                                )}
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -917,6 +1027,7 @@ const Orders = () => {
                                                         </div>
                                                         <div>
                                                             <p className="text-xs font-bold text-slate-900">{item.name}</p>
+                                                            {item.itemCode && <p className="text-[10px] font-semibold text-slate-500 font-mono mt-0.5">Code: {item.itemCode}</p>}
                                                             <p className="text-xs font-semibold text-slate-600 mt-0.5">₹{Math.ceil(item.price)} × {item.qty}</p>
                                                         </div>
                                                     </div>
@@ -949,12 +1060,12 @@ const Orders = () => {
                                                                                 "bg-slate-100 text-slate-700 focus:ring-slate-200"
                                                     )}
                                                 >
-                                                    <option value="pending" disabled={['confirmed','packed','out_for_delivery','delivered','cancelled'].includes(selectedOrder.status.toLowerCase())}>Pending</option>
-                                                    <option value="confirmed" disabled={['packed','out_for_delivery','delivered','cancelled'].includes(selectedOrder.status.toLowerCase())}>Confirmed</option>
-                                                    <option value="packed" disabled={['out_for_delivery','delivered','cancelled'].includes(selectedOrder.status.toLowerCase())}>Packed</option>
-                                                    <option value="out_for_delivery" disabled={['delivered','cancelled'].includes(selectedOrder.status.toLowerCase())}>Out for Delivery</option>
-                                                    <option value="delivered" disabled={selectedOrder.status.toLowerCase() === 'cancelled'}>Delivered</option>
-                                                    <option value="cancelled" disabled={selectedOrder.status.toLowerCase() === 'delivered'}>Cancelled</option>
+                                                    <option value="pending" disabled={isStatusOptionDisabled(selectedOrder.status, 'pending')}>Pending</option>
+                                                    <option value="confirmed" disabled={isStatusOptionDisabled(selectedOrder.status, 'confirmed')}>Confirmed</option>
+                                                    <option value="packed" disabled={isStatusOptionDisabled(selectedOrder.status, 'packed')}>Packed</option>
+                                                    <option value="out_for_delivery" disabled={isStatusOptionDisabled(selectedOrder.status, 'out_for_delivery')}>Out for Delivery</option>
+                                                    <option value="delivered" disabled={isStatusOptionDisabled(selectedOrder.status, 'delivered')}>Delivered</option>
+                                                    <option value="cancelled" disabled={isStatusOptionDisabled(selectedOrder.status, 'cancelled')}>Cancelled</option>
                                                 </select>
                                             </div>
                                         </div>

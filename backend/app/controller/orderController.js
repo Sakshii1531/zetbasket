@@ -465,6 +465,39 @@ export const updateOrderStatus = async (req, res) => {
     }
     // -----------------------------
 
+    // Strictly enforce no status regression for sellers
+    if (role === "seller" && status) {
+      const STATUS_RANK = {
+        pending: 0,
+        confirmed: 1,
+        packed: 2,
+        out_for_delivery: 3,
+        delivered: 4,
+        cancelled: 5,
+      };
+      const currentLow = String(order.status || "pending").toLowerCase();
+      const targetLow = String(status).toLowerCase();
+
+      if (currentLow === "delivered" || currentLow === "cancelled") {
+        return handleResponse(
+          res,
+          400,
+          `Cannot change status of an order that is already ${currentLow}.`,
+        );
+      }
+
+      const currentRank = STATUS_RANK[currentLow] ?? 0;
+      const targetRank = STATUS_RANK[targetLow] ?? 0;
+
+      if (targetRank < currentRank && targetLow !== "cancelled") {
+        return handleResponse(
+          res,
+          400,
+          "Order status cannot be reverted to a previous stage.",
+        );
+      }
+    }
+
     const oldStatus = order.status;
     if (status) {
       order.status = status;

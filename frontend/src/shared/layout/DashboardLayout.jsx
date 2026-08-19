@@ -19,6 +19,51 @@ import orderAlertSound from '@/assets/sounds/order_alert.mp3';
 
 const POLL_INTERVAL_MS = 15000;
 
+let synthInterval = null;
+let audioCtx = null;
+
+const playRingtoneChime = () => {
+    try {
+        const Ctx = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext);
+        if (!Ctx) return;
+        if (!audioCtx) audioCtx = new Ctx();
+        if (audioCtx.state === "suspended") {
+            audioCtx.resume();
+        }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.3);
+
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.4);
+    } catch (e) {
+        /* ignore synth errors */
+    }
+};
+
+const startWebAudioBeepRingtone = () => {
+    if (synthInterval) return;
+    playRingtoneChime();
+    synthInterval = setInterval(() => {
+        playRingtoneChime();
+    }, 800);
+};
+
+const stopWebAudioBeepRingtone = () => {
+    if (synthInterval) {
+        clearInterval(synthInterval);
+        synthInterval = null;
+    }
+};
+
 /** Match server `sellerPendingExpiresAt` — never reset to a full 60s when the modal opens late. */
 function secondsLeftUntilSellerExpiry(order) {
     if (!order) return 0;
@@ -86,6 +131,30 @@ const DashboardLayout = ({ children, navItems, title }) => {
         return orderRingtoneRef.current;
     };
 
+    useEffect(() => {
+        const unlockAudio = () => {
+            const audio = getOrderRingtone();
+            audio.play().then(() => {
+                audio.pause();
+                audio.currentTime = 0;
+            }).catch(() => {});
+            const Ctx = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext);
+            if (Ctx) {
+                if (!audioCtx) audioCtx = new Ctx();
+                if (audioCtx.state === "suspended") audioCtx.resume();
+            }
+        };
+
+        window.addEventListener("pointerdown", unlockAudio, { once: true });
+        window.addEventListener("touchstart", unlockAudio, { once: true });
+        window.addEventListener("keydown", unlockAudio, { once: true });
+        return () => {
+            window.removeEventListener("pointerdown", unlockAudio);
+            window.removeEventListener("touchstart", unlockAudio);
+            window.removeEventListener("keydown", unlockAudio);
+        };
+    }, []);
+
     const startOrderRingtone = () => {
         const audio = getOrderRingtone();
         audio.loop = true;
@@ -93,22 +162,27 @@ const DashboardLayout = ({ children, navItems, title }) => {
         audio.muted = false;
         audio.volume = 1;
         audio.play().catch(() => { });
+        startWebAudioBeepRingtone();
 
         if (!ringtoneRetryTimerRef.current) {
             ringtoneRetryTimerRef.current = setInterval(() => {
-                if (!newOrderAlertRef.current) return;
                 const currentAudio = getOrderRingtone();
-                if (!currentAudio.paused) return;
-                currentAudio.play().catch(() => { });
+                if (currentAudio.paused) {
+                    currentAudio.play().catch(() => { });
+                }
             }, 1200);
         }
 
         if (!ringtoneUnlockHandlerRef.current && typeof window !== 'undefined' && typeof document !== 'undefined') {
             const unlockPlayback = () => {
-                if (!newOrderAlertRef.current) return;
                 const currentAudio = getOrderRingtone();
-                if (!currentAudio.paused) return;
-                currentAudio.play().catch(() => { });
+                if (currentAudio.paused) {
+                    currentAudio.play().catch(() => { });
+                }
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (Ctx && audioCtx && audioCtx.state === "suspended") {
+                    audioCtx.resume();
+                }
             };
             ringtoneUnlockHandlerRef.current = unlockPlayback;
             window.addEventListener('focus', unlockPlayback);
@@ -120,6 +194,7 @@ const DashboardLayout = ({ children, navItems, title }) => {
     };
 
     const stopOrderRingtone = () => {
+        stopWebAudioBeepRingtone();
         const audio = orderRingtoneRef.current;
         if (ringtoneRetryTimerRef.current) {
             clearInterval(ringtoneRetryTimerRef.current);
@@ -234,6 +309,18 @@ const DashboardLayout = ({ children, navItems, title }) => {
         return undefined;
     }, [newOrderAlert]);
 
+    // Lock background scroll when new order alert modal is visible
+    useEffect(() => {
+        if (newOrderAlert) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [newOrderAlert]);
+
     useEffect(() => {
         return () => {
             stopOrderRingtone();
@@ -250,6 +337,16 @@ const DashboardLayout = ({ children, navItems, title }) => {
         const getToken = createSocketTokenReader(STORAGE_KEYS.AUTH_SELLER);
         getOrderSocket(getToken);
         const unsubscribeSellerNew = onSellerOrderNew(getToken, (payload) => {
+            if (payload?.orderId) {
+                const incoming = {
+                    orderId: payload.orderId,
+                    ...payload,
+                };
+                setNewOrderAlert(incoming);
+                setShownOrderIds((prev) => new Set(prev).add(payload.orderId));
+                shownOrderIdsRef.current = new Set(shownOrderIdsRef.current).add(payload.orderId);
+                newOrderAlertRef.current = incoming;
+            }
             if (fetchOrdersRef.current) fetchOrdersRef.current();
             startOrderRingtone();
         });
@@ -387,7 +484,7 @@ const DashboardLayout = ({ children, navItems, title }) => {
     };
 
     return (
-        <div className="min-h-screen mesh-gradient-light relative">
+        <div className="min-h-screen mesh-gradient-light relative overflow-x-hidden">
             {/* Background Blobs for depth */}
             <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] -z-10 animate-pulse pointer-events-none"></div>
             <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-brand-500/5 rounded-full blur-[120px] -z-10 animate-pulse pointer-events-none" style={{ animationDelay: '2s' }}></div>
@@ -398,9 +495,9 @@ const DashboardLayout = ({ children, navItems, title }) => {
                 isOpen={isSidebarOpen}
                 onClose={() => setIsSidebarOpen(false)}
             />
-            <div className={cn("transition-all duration-300", (role === "admin" || role === "seller") ? "pl-0 md:pl-72" : "pl-72")}>
+            <div className={cn("transition-all duration-300 overflow-x-hidden max-w-full", (role === "admin" || role === "seller") ? "pl-0 md:pl-72" : "pl-72")}>
                 <Topbar onMenuClick={() => setIsSidebarOpen(true)} />
-                <main className={cn("p-4 md:p-6 min-h-screen", (role === "admin" || role === "seller") ? "pt-20 md:pt-24 pb-24 md:pb-6" : "pt-20")}>
+                <main className={cn("p-4 md:p-6 min-h-screen overflow-x-hidden max-w-full", (role === "admin" || role === "seller") ? "pt-20 md:pt-24 pb-24 md:pb-6" : "pt-20")}>
                     <div className="w-full pb-12">
                         <SellerOrdersContext.Provider
                             value={{

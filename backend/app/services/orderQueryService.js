@@ -683,8 +683,26 @@ export async function getSellerReturns({
     Order.countDocuments(query),
   ]);
 
+  const orderIds = orders.map((o) => o.orderId);
+  const activeOtps = await OrderOtp.find({
+    orderId: { $in: orderIds },
+    type: "return_drop",
+    consumedAt: null,
+    expiresAt: { $gt: new Date() },
+  }).lean();
+
+  const otpMap = new Map();
+  activeOtps.forEach((o) => {
+    otpMap.set(o.orderId, o.code);
+  });
+
+  const ordersWithOtp = orders.map((o) => ({
+    ...o,
+    returnDropOtp: otpMap.get(o.orderId) || null,
+  }));
+
   return {
-    items: orders,
+    items: ordersWithOtp,
     page,
     limit,
     total,

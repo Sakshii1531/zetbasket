@@ -185,9 +185,21 @@ const Returns = () => {
         });
     }, [returns, activeTab]);
 
-    const openDetails = (ret) => {
+    const openDetails = async (ret) => {
         setSelectedReturn(ret);
         setIsDetailsOpen(true);
+        try {
+            const res = await sellerApi.getReturnDetails(ret.orderId);
+            const fresh = res.data?.result || res.data?.data;
+            if (fresh) {
+                setSelectedReturn((prev) => ({
+                    ...prev,
+                    ...fresh,
+                }));
+            }
+        } catch (e) {
+            console.error("Failed to fetch fresh return details", e);
+        }
     };
 
     const handleApprove = async (orderId) => {
@@ -395,6 +407,14 @@ const Returns = () => {
                                                         <div className="mt-2 flex items-center gap-1.5 px-2 py-1 bg-brand-50 rounded-lg border border-brand-100 w-fit">
                                                             <HiOutlineTruck className="h-3 w-3 text-brand-600" />
                                                             <span className="text-[10px] font-bold text-brand-700">Rider: {ret.returnDeliveryBoy.name}</span>
+                                                        </div>
+                                                    )}
+                                                    {/* Seller Return Drop OTP Badge */}
+                                                    {(ret.returnDropOtp || activeOtps[ret.orderId]?.otp) && (
+                                                        <div className="mt-2 flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 rounded-lg border border-emerald-200 w-fit">
+                                                            <span className="text-[10px] font-black text-emerald-800">
+                                                                Seller Drop OTP: <span className="font-mono text-xs font-extrabold text-emerald-900">{activeOtps[ret.orderId]?.otp || ret.returnDropOtp}</span>
+                                                            </span>
                                                         </div>
                                                     )}
                                                     {/* Proper Data: QC Note for passed/failed */}
@@ -707,20 +727,20 @@ const Returns = () => {
                                 </div>
 
                                 {/* Active OTP Display */}
-                                {activeOtps[selectedReturn.orderId] && (
-                                    <div className="bg-brand-50 border-2 border-dashed border-brand-200 rounded-3xl p-6 text-center space-y-3 animate-in fade-in zoom-in duration-500">
+                                {(activeOtps[selectedReturn.orderId]?.otp || selectedReturn.returnDropOtp) && (
+                                    <div className="bg-brand-50 border-2 border-dashed border-brand-200 rounded-3xl p-5 text-center space-y-3 animate-in fade-in zoom-in duration-300">
                                         <p className="text-[10px] font-black text-brand-600 uppercase tracking-[0.2em]">
-                                            Rider Arrived - Share OTP
+                                            Seller Return Drop OTP (Share with Rider)
                                         </p>
                                         <div className="flex items-center justify-center gap-3">
-                                            {activeOtps[selectedReturn.orderId].otp.split('').map((char, i) => (
-                                                <div key={i} className="h-14 w-12 bg-white rounded-xl shadow-sm border border-brand-100 flex items-center justify-center text-3xl font-black text-slate-900 border-b-4 border-b-brand-500">
+                                            {String(activeOtps[selectedReturn.orderId]?.otp || selectedReturn.returnDropOtp).split('').map((char, i) => (
+                                                <div key={i} className="h-12 w-10 sm:h-14 sm:w-12 bg-white rounded-xl shadow-sm border border-brand-100 flex items-center justify-center text-2xl sm:text-3xl font-black text-slate-900 border-b-4 border-b-brand-500">
                                                     {char}
                                                 </div>
                                             ))}
                                         </div>
                                         <p className="text-[10px] font-bold text-slate-500 italic">
-                                            Sharing this code confirms you have received the product.
+                                            Share this 4-digit code with the delivery rider to confirm product receipt.
                                         </p>
                                     </div>
                                 )}
