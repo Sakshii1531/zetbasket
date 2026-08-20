@@ -61,7 +61,7 @@ export const checkEligibility = async (orderId, customerId) => {
 
   // Check if rating already exists
   const existingRating = await DeliveryRating.findOne({
-    orderId: { $in: [order._id, order.orderId] },
+    orderId: order._id,
     customerId: customerId,
   }).lean();
 
