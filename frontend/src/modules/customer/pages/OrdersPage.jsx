@@ -4,6 +4,7 @@ import { Package, ChevronRight, Clock, CheckCircle, Loader2, ChevronLeft } from 
 import { customerApi } from '../services/customerApi';
 import { getOrderStatusLabel, getLegacyStatusFromOrder } from '@/shared/utils/orderStatus';
 import { applyCloudinaryTransform } from '@/core/utils/imageUtils';
+import { formatCurrencyInteger } from "@shared/utils/currency";
 import ProductRatingModal from '../components/order/ProductRatingModal';
 
 const OrdersPage = () => {
@@ -165,7 +166,7 @@ const OrdersPage = () => {
                                     )}
                                     <span className="text-[11px] font-medium text-slate-400">Total</span>
                                     <span className="text-sm font-semibold text-slate-900">
-                                    ₹{Math.ceil(Number(order.pricing?.total || order.total || 0))}
+                                    {formatCurrencyInteger(order.pricing?.total || order.total || 0)}
                                     </span>
                                     <ChevronRight size={16} className="text-slate-300" />
                                 </div>

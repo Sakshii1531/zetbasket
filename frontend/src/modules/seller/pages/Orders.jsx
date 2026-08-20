@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Card from '@shared/components/ui/Card';
 import Button from '@shared/components/ui/Button';
 import Badge from '@shared/components/ui/Badge';
+import { formatCurrencyInteger } from "@shared/utils/currency";
 import Input from '@shared/components/ui/Input';
 import {
     HiOutlineMagnifyingGlass,
@@ -970,20 +971,20 @@ const Orders = () => {
                                                     <div className="space-y-2 text-xs">
                                                         <div className="flex justify-between text-slate-300">
                                                             <span className="font-semibold">Item Subtotal</span>
-                                                            <span className="font-bold text-white">₹{selectedOrder.productSubtotal || Math.ceil(selectedOrder.items.reduce((s, i) => s + i.price * i.qty, 0))}</span>
+                                                            <span className="font-bold text-white">{formatCurrencyInteger(selectedOrder.productSubtotal || selectedOrder.items.reduce((s, i) => s + i.price * i.qty, 0))}</span>
                                                         </div>
                                                         {selectedOrder.discount > 0 && (
                                                             <div className="flex justify-between text-emerald-400 font-bold">
                                                                 <span className="font-semibold flex items-center gap-1">
                                                                     🏷️ Coupon Discount {selectedOrder.couponCode ? `(${selectedOrder.couponCode})` : ''}
                                                                 </span>
-                                                                <span>- ₹{selectedOrder.discount}</span>
+                                                                <span>- {formatCurrencyInteger(selectedOrder.discount)}</span>
                                                             </div>
                                                         )}
                                                         {selectedOrder.adminCommission > 0 && (
                                                             <div className="flex justify-between text-rose-300">
                                                                 <span className="font-semibold">Platform Commission</span>
-                                                                <span className="font-bold">- ₹{selectedOrder.adminCommission}</span>
+                                                                <span className="font-bold">- {formatCurrencyInteger(selectedOrder.adminCommission)}</span>
                                                             </div>
                                                         )}
                                                         <div className="h-px bg-slate-800 my-2" />
@@ -992,15 +993,15 @@ const Orders = () => {
                                                                 <p className="text-[10px] font-bold text-emerald-400 uppercase">Your Net Earning</p>
                                                                 <p className="text-[10px] text-slate-400">Credited to Balance</p>
                                                             </div>
-                                                            <span className="text-base font-black text-emerald-400">₹{selectedOrder.sellerPayout || selectedOrder.productSubtotal}</span>
+                                                            <span className="text-base font-black text-emerald-400">{formatCurrencyInteger(selectedOrder.sellerPayout || selectedOrder.productSubtotal)}</span>
                                                         </div>
                                                         <div className="pt-1 flex justify-between items-center text-[11px] text-slate-400">
                                                             <span>Customer Paid Total:</span>
                                                             <span className="text-slate-200 font-black">
-                                                                ₹{selectedOrder.total}
+                                                                {formatCurrencyInteger(selectedOrder.total)}
                                                                 {selectedOrder.discount > 0 && (
                                                                     <span className="ml-1 text-[10px] font-semibold text-emerald-400">
-                                                                        (₹{selectedOrder.discount} coupon off)
+                                                                        ({formatCurrencyInteger(selectedOrder.discount)} coupon off)
                                                                     </span>
                                                                 )}
                                                             </span>
@@ -1028,11 +1029,11 @@ const Orders = () => {
                                                         <div>
                                                             <p className="text-xs font-bold text-slate-900">{item.name}</p>
                                                             {item.itemCode && <p className="text-[10px] font-semibold text-slate-500 font-mono mt-0.5">Code: {item.itemCode}</p>}
-                                                            <p className="text-xs font-semibold text-slate-600 mt-0.5">₹{Math.ceil(item.price)} × {item.qty}</p>
+                                                            <p className="text-xs font-semibold text-slate-600 mt-0.5">{formatCurrencyInteger(item.price)} × {item.qty}</p>
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="text-xs font-black text-slate-900">₹{Math.ceil(item.price * item.qty)}</p>
+                                                        <p className="text-xs font-black text-slate-900">{formatCurrencyInteger(item.price * item.qty)}</p>
                                                     </div>
                                                 </div>
                                             ))}

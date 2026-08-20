@@ -107,6 +107,7 @@ export async function afterPlaceOrderV2(orderDoc) {
       orderId,
       workflowStatus: WORKFLOW_STATUS.SELLER_PENDING,
       sellerPendingExpiresAt: orderDoc.sellerPendingExpiresAt,
+      pricing: orderDoc.pricing,
     },
   });
 }

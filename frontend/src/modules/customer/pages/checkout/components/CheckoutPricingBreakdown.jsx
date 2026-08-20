@@ -1,6 +1,7 @@
 import React from "react";
 import { Clipboard, Tag, Heart, Wallet } from "lucide-react";
 import { motion } from "framer-motion";
+import { formatCurrencyInteger } from "@shared/utils/currency";
 
 /**
  * CheckoutPricingBreakdown
@@ -76,14 +77,14 @@ const CheckoutPricingBreakdown = React.memo(function CheckoutPricingBreakdown({
               Item Total
             </span>
             <span className="font-black text-slate-800">
-              ₹{pricingPreview?.productSubtotal ?? cartTotal}
+              {formatCurrencyInteger(pricingPreview?.productSubtotal ?? cartTotal)}
             </span>
           </div>
           <div className="flex justify-between items-center px-2">
             <span className="text-slate-500 font-bold text-[13px] uppercase tracking-wider">
               Delivery Fee
             </span>
-            <span className="font-black text-slate-800">₹{deliveryFee}</span>
+            <span className="font-black text-slate-800">{formatCurrencyInteger(deliveryFee)}</span>
           </div>
           {pricingPreview &&
             typeof pricingPreview.distanceKmActual === "number" &&
@@ -106,13 +107,13 @@ const CheckoutPricingBreakdown = React.memo(function CheckoutPricingBreakdown({
             <span className="text-slate-500 font-bold text-[13px] uppercase tracking-wider">
               Handling Fee
             </span>
-            <span className="font-black text-slate-800">₹{handlingFee}</span>
+            <span className="font-black text-slate-800">{formatCurrencyInteger(handlingFee)}</span>
           </div>
           <div className="flex justify-between items-center px-2">
             <span className="text-slate-500 font-bold text-[13px] uppercase tracking-wider">
               Tax
             </span>
-            <span className="font-black text-slate-800">₹{taxAmount}</span>
+            <span className="font-black text-slate-800">{formatCurrencyInteger(taxAmount)}</span>
           </div>
 
           {selectedCoupon && (
@@ -124,7 +125,7 @@ const CheckoutPricingBreakdown = React.memo(function CheckoutPricingBreakdown({
                 <Tag size={14} />
                 Coupon Reserved
               </span>
-              <span className="font-black text-primary">-₹{discountAmount}</span>
+              <span className="font-black text-primary">-{formatCurrencyInteger(discountAmount)}</span>
             </motion.div>
           )}
 
@@ -134,7 +135,7 @@ const CheckoutPricingBreakdown = React.memo(function CheckoutPricingBreakdown({
                 <Heart size={14} className="fill-pink-500" />
                 Partner Support
               </span>
-              <span className="font-black text-pink-600">₹{tipAmount}</span>
+              <span className="font-black text-pink-600">{formatCurrencyInteger(tipAmount)}</span>
             </div>
           )}
 
@@ -147,7 +148,7 @@ const CheckoutPricingBreakdown = React.memo(function CheckoutPricingBreakdown({
                 <Wallet size={14} />
                 Wallet Applied
               </span>
-              <span className="font-black text-primary">-₹{walletAmountToUse}</span>
+              <span className="font-black text-primary">-{formatCurrencyInteger(walletAmountToUse)}</span>
             </motion.div>
           )}
 
@@ -162,7 +163,7 @@ const CheckoutPricingBreakdown = React.memo(function CheckoutPricingBreakdown({
                 </span>
               </div>
               <span className="font-[1000] text-primary text-3xl tracking-tighter italic">
-                {isPreviewLoading ? "Calculating..." : `₹${Math.ceil(finalAmountToPay)}`}
+                {isPreviewLoading ? "Calculating..." : formatCurrencyInteger(finalAmountToPay)}
               </span>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/core/context/AuthContext";
+import { formatCurrencyInteger } from "@shared/utils/currency";
 import {
   Phone,
   MessageSquare,
@@ -632,7 +633,7 @@ const OrderDetails = () => {
             !isReturn &&
             step < 4 && (
               <span className={`mt-1 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-sm animate-pulse bg-orange-600`}>
-                COLLECT CASH: ₹{Math.max(0, (order.pricing?.total || 0) - (order.pricing?.walletAmount || 0))}
+                COLLECT CASH: {formatCurrencyInteger(Math.max(0, (order.pricing?.total || 0) - (order.pricing?.walletAmount || 0)))}
               </span>
             )}
         </div>
@@ -974,7 +975,7 @@ const OrderDetails = () => {
                         >
                           {order.payment?.method?.toUpperCase() || "PENDING"}
                         </p>
-                        <p className="text-[10px] text-gray-400 font-medium">Bill: Rs.{order.pricing?.total}</p>
+                        <p className="text-[10px] text-gray-400 font-medium">Bill: {formatCurrencyInteger(order.pricing?.total)}</p>
                       </div>
                     </div>
                   </div>
@@ -1066,12 +1067,12 @@ const OrderDetails = () => {
                         </span>
                         <span className="text-gray-800 font-medium">{item.name}</span>
                       </div>
-                      <span className="font-bold text-gray-600">Rs.{item.price * item.quantity}</span>
+                      <span className="font-bold text-gray-600">{formatCurrencyInteger(item.price * item.quantity)}</span>
                     </div>
                   ))}
                   <div className="pt-3 mt-2 border-t border-gray-200 flex justify-between items-center">
                     <span className="text-gray-500 text-sm">Total Bill</span>
-                    <span className="text-lg font-bold text-gray-900">Rs.{order.pricing?.total}</span>
+                    <span className="text-lg font-bold text-gray-900">{formatCurrencyInteger(order.pricing?.total)}</span>
                   </div>
                 </div>
               </motion.div>

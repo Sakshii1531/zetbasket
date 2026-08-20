@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Card from "@shared/components/ui/Card";
 import PageHeader from "@shared/components/ui/PageHeader";
 import Badge from "@shared/components/ui/Badge";
+import { formatCurrencyInteger } from "@shared/utils/currency";
 import {
   DollarSign,
   Truck,
@@ -585,7 +586,7 @@ const Dashboard = () => {
                             Subtotal
                           </span>
                           <span className="font-black text-slate-900">
-                            ₹{(selectedOrder.total - 10).toFixed(2)}
+                            {formatCurrencyInteger(selectedOrder.total - 10)}
                           </span>
                         </div>
                         <div className="flex justify-between text-xs">
@@ -593,7 +594,7 @@ const Dashboard = () => {
                             Delivery Fee
                           </span>
                           <span className="font-black text-brand-600">
-                            ₹10.00
+                            {formatCurrencyInteger(10)}
                           </span>
                         </div>
                         <div className="h-px bg-primary/10 my-2" />
@@ -602,7 +603,7 @@ const Dashboard = () => {
                             Total
                           </span>
                           <span className="font-black text-primary">
-                            ₹{selectedOrder.total.toFixed(2)}
+                            {formatCurrencyInteger(selectedOrder.total)}
                           </span>
                         </div>
                       </div>
@@ -649,13 +650,13 @@ const Dashboard = () => {
                             {item.name}
                           </p>
                           <p className="text-[10px] font-semibold text-slate-600 mt-0.5">
-                            ₹{Number(item.price).toFixed(2)} × {item.qty}
+                            {formatCurrencyInteger(item.price)} × {item.qty}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="text-xs font-black text-slate-900">
-                          ₹{(item.price * item.qty).toFixed(2)}
+                          {formatCurrencyInteger(item.price * item.qty)}
                         </p>
                       </div>
                     </div>

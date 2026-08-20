@@ -8,6 +8,7 @@ import { useCart } from "../../context/CartContext";
 import { useToast } from "@shared/components/ui/Toast";
 import { useCartAnimation } from "../../context/CartAnimationContext";
 import { useLocation as useAppLocation } from "../../context/LocationContext";
+import { formatCurrencyInteger } from "@shared/utils/currency";
 import { applyCloudinaryTransform } from "@/core/utils/imageUtils";
 
 import { motion, AnimatePresence } from "framer-motion";
@@ -366,7 +367,7 @@ const ProductCard = React.memo(
                   "font-[1000] text-[#1A1A1A]",
                   compact ? "text-[11px]" : "text-[13px] sm:text-sm",
                 )}>
-                ₹{defaultVariant?.displayPrice || product.price}
+                {formatCurrencyInteger(defaultVariant?.displayPrice ?? product.price)}
               </span>
               {defaultVariant?.displayOriginalPrice && (
                 <span
@@ -374,7 +375,7 @@ const ProductCard = React.memo(
                     "font-medium text-gray-400 line-through leading-none",
                     compact ? "text-[8px]" : "text-[9px] sm:text-[10px]",
                   )}>
-                  ₹{defaultVariant.displayOriginalPrice}
+                  {formatCurrencyInteger(defaultVariant.displayOriginalPrice)}
                 </span>
               )}
             </div>

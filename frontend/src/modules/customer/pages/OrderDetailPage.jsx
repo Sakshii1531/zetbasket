@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { formatCurrencyInteger } from "@shared/utils/currency";
 import InvoiceModal from "../components/order/InvoiceModal";
 import HelpModal from "../components/order/HelpModal";
 import DeliveryRatingModal from "../components/order/DeliveryRatingModal";
@@ -1002,7 +1003,7 @@ const OrderDetailPage = () => {
               </div>
               <button
                 onClick={() => setShowProductRatingModal(true)}
-                className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all shadow-md active:scale-95"
+                className="w-fit px-3 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all shadow-md active:scale-95"
               >
                 Rate Products
               </button>
@@ -1205,7 +1206,7 @@ const OrderDetailPage = () => {
           <div className="space-y-2.5 text-sm">
             <div className="flex justify-between text-slate-600">
               <span>Item Total</span>
-              <span className="font-semibold">₹{Math.ceil(order.pricing?.subtotal || 0)}</span>
+              <span className="font-semibold">{formatCurrencyInteger(order.pricing?.subtotal || 0)}</span>
             </div>
             <div className="flex justify-between text-slate-600">
               <span>Delivery Fee</span>
@@ -1215,14 +1216,14 @@ const OrderDetailPage = () => {
                 }>
                 {order.pricing?.deliveryFee === 0
                   ? "FREE"
-                  : `₹${Math.ceil(order.pricing?.deliveryFee || 0)}`}
+                  : formatCurrencyInteger(order.pricing?.deliveryFee || 0)}
               </span>
             </div>
             {(order.paymentBreakdown?.handlingFeeCharged > 0 || order.pricing?.platformFee > 0) && (
               <div className="flex justify-between text-slate-600">
                 <span>Handling Fee</span>
                 <span className="font-semibold">
-                  ₹{Math.ceil(order.paymentBreakdown?.handlingFeeCharged || order.pricing?.platformFee || 0)}
+                  {formatCurrencyInteger(order.paymentBreakdown?.handlingFeeCharged || order.pricing?.platformFee || 0)}
                 </span>
               </div>
             )}
@@ -1230,14 +1231,14 @@ const OrderDetailPage = () => {
               <div className="flex justify-between text-slate-600">
                 <span>Tax / GST</span>
                 <span className="font-semibold">
-                  ₹{Math.ceil(order.paymentBreakdown?.taxTotal || order.pricing?.gst || 0)}
+                  {formatCurrencyInteger(order.paymentBreakdown?.taxTotal || order.pricing?.gst || 0)}
                 </span>
               </div>
             )}
             {order.pricing?.tip > 0 && (
               <div className="flex justify-between text-slate-600">
                 <span>Tip</span>
-                <span className="font-semibold">₹{Math.ceil(order.pricing?.tip || 0)}</span>
+                <span className="font-semibold">{formatCurrencyInteger(order.pricing?.tip || 0)}</span>
               </div>
             )}
             <div className="border-t border-slate-100 mt-3 pt-3 flex justify-between items-center">
@@ -1245,7 +1246,7 @@ const OrderDetailPage = () => {
                 Total Amount
               </span>
               <span className="text-xl font-black text-brand-600">
-                ₹{Math.ceil(order.pricing?.total || 0)}
+                {formatCurrencyInteger(order.pricing?.total || 0)}
               </span>
             </div>
           </div>
@@ -1307,7 +1308,7 @@ const OrderDetailPage = () => {
               </div>
               <button
                 onClick={() => setShowProductRatingModal(true)}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5"
+                className="w-fit px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5"
               >
                 <Star size={14} fill="currentColor" />
                 Rate Products

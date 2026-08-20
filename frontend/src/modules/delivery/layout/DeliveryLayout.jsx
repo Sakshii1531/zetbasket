@@ -19,6 +19,7 @@ import {
 import { saveDeliveryPartnerLocation } from "../utils/deliveryLastLocation";
 import { createSocketTokenReader } from "@core/utils/authStorage";
 import { STORAGE_KEYS } from "@core/utils/storage";
+import { formatCurrencyInteger } from "@shared/utils/currency";
 import orderAlertSound from "@/assets/sounds/order_alert.mp3";
 
 const getDeliveryToken = createSocketTokenReader(STORAGE_KEYS.AUTH_DELIVERY);
@@ -994,7 +995,7 @@ const DeliveryLayout = () => {
                       {activeOrder.isReturnPickup ? "Collect return item" : "Accept or reject"}
                     </p>
                     <div className="flex items-center gap-2 mb-6">
-                      <span className="text-2xl font-black text-brand-600">₹{activeOrder.earnings}</span>
+                      <span className="text-2xl font-black text-brand-600">{formatCurrencyInteger(activeOrder.earnings)}</span>
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider font-outfit">
                         Earnings
                       </span>
@@ -1058,17 +1059,17 @@ const DeliveryLayout = () => {
                       <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-1.5">
                         <div className="flex justify-between items-center text-xs text-slate-600">
                           <span className="font-medium">Actual Order Amount:</span>
-                          <span className="font-bold text-slate-900">₹{activeOrder.subtotal || activeOrder.value}</span>
+                          <span className="font-bold text-slate-900">{formatCurrencyInteger(activeOrder.subtotal || activeOrder.value)}</span>
                         </div>
                         {activeOrder.couponDiscount > 0 && (
                           <div className="flex justify-between items-center text-xs text-emerald-600 font-bold">
                             <span>Coupon Discount{activeOrder.couponCode ? ` (${activeOrder.couponCode})` : ""}:</span>
-                            <span>-₹{activeOrder.couponDiscount}</span>
+                            <span>-{formatCurrencyInteger(activeOrder.couponDiscount)}</span>
                           </div>
                         )}
                         <div className="flex justify-between items-center text-xs font-black text-slate-900 border-t border-slate-200/60 pt-1.5 mt-1">
                           <span>Payable Amount:</span>
-                          <span className="text-brand-600 font-black">₹{activeOrder.value}</span>
+                          <span className="text-brand-600 font-black">{formatCurrencyInteger(activeOrder.value)}</span>
                         </div>
                       </div>
                     </div>

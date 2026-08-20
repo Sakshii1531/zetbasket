@@ -759,6 +759,7 @@ export async function placeOrderAtomic({
           orderId: order.orderId,
           workflowStatus: "SELLER_PENDING",
           sellerPendingExpiresAt: order.sellerPendingExpiresAt || order.expiresAt,
+          pricing: order.pricing,
         });
       }
     }

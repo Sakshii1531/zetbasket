@@ -6,6 +6,7 @@ import { useSettings } from '@core/context/SettingsContext';
 import { useParams, useNavigate } from 'react-router-dom';
 import Card from '@shared/components/ui/Card';
 import Badge from '@shared/components/ui/Badge';
+import { formatCurrencyInteger } from "@shared/utils/currency";
 import { adminApi } from '../services/adminApi';
 import {
     ChevronLeft,
@@ -299,18 +300,18 @@ const OrderDetail = () => {
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Delivery Fee</span>
-                                    <span className="text-xs font-bold text-brand-600">₹{order.pricing?.deliveryFee || 0}</span>
+                                    <span className="text-xs font-bold text-brand-600">{formatCurrencyInteger(order.pricing?.deliveryFee || 0)}</span>
                                 </div>
                                 {(order.paymentBreakdown?.taxTotal > 0 || order.pricing?.gst > 0 || order.pricing?.tax > 0) && (
                                     <div className="flex items-center justify-between">
                                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tax / GST</span>
-                                        <span className="text-xs font-bold text-amber-600">₹{Math.ceil(order.paymentBreakdown?.taxTotal || order.pricing?.gst || order.pricing?.tax || 0)}</span>
+                                        <span className="text-xs font-bold text-amber-600">{formatCurrencyInteger(order.paymentBreakdown?.taxTotal || order.pricing?.gst || order.pricing?.tax || 0)}</span>
                                     </div>
                                 )}
                                 <div className="h-px w-full bg-slate-200 my-1" />
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-black text-slate-900 uppercase tracking-tight">Total Payable</span>
-                                    <span className="text-lg font-black text-fuchsia-600">₹{order.pricing?.total || 0}</span>
+                                    <span className="text-lg font-black text-fuchsia-600">{formatCurrencyInteger(order.pricing?.total || 0)}</span>
                                 </div>
                             </div>
                         </div>
@@ -739,7 +740,7 @@ const OrderDetail = () => {
                                     </tr>
                                     <tr>
                                         <td align="left" style={{ fontSize: "16px", fontWeight: "900", color: "#0f172a" }}>GRAND TOTAL</td>
-                                        <td align="right" style={{ fontSize: "24px", fontWeight: "900", color: "#2563eb" }}>₹{order.pricing?.total || order.total || 0}</td>
+                                        <td align="right" style={{ fontSize: "24px", fontWeight: "900", color: "#2563eb" }}>{formatCurrencyInteger(order.pricing?.total || order.total || 0)}</td>
                                     </tr>
                                 </table>
                             </div>

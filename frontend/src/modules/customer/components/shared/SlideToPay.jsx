@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, useAnimation, useMotionValue, useTransform } from 'framer-motion';
 import { ChevronRight, Check, ChevronsRight } from 'lucide-react';
+import { formatCurrencyInteger } from "@shared/utils/currency";
 
 const SlideToPay = ({
     onSuccess,
@@ -91,7 +92,7 @@ const SlideToPay = ({
                 style={{ opacity: textOpacity }}
             >
                 <span className="text-white font-black text-sm md:text-[13px] tracking-[0.25em] uppercase flex items-center gap-2">
-                    {text} <span className="text-white/40">|</span> <span className="text-brand-50 font-extrabold">₹{Math.ceil(amount || 0)}</span>
+                    {text} <span className="text-white/40">|</span> <span className="text-brand-50 font-extrabold">{formatCurrencyInteger(amount || 0)}</span>
                 </span>
 
                 <div className="absolute right-4 animate-pulse text-white/70">
